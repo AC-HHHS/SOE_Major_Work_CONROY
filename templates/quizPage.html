@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>First Quiz</title>
+</head>
+<body>
+    <h1> Practice Quiz for Mod 5: Equilibrium and Acid Reactions</h1>
+
+    <form method="post" action="/quiz">
+        <div>
+            <p>1. At equilibrium, a 1.00L vessel contains 0.0430 mol of <b>H<sub>2</sub></b>, 0.0620 mol of <b>I<sub>2</sub></b>, and 0.358 mole of <b>HI</b>. The system is represented by the following equation:<br>
+            <b>H<sub>2</sub> (g) + I<sub>2</sub> (g) = 2HI (g)</b> <br>
+            Which of the following is closest to the value of the equilibrium constant, <b>K<sub>eq</sub></b>, for this reaction?</p>
+
+            <label><input type="radio" name="q1" value="a1"> <b>A.</b> 0.0208</label><br>
+            <label><input type="radio" name="q1" value="b1"> <b>B.</b> 48.1</label><br> 
+            <label><input type="radio" name="q1" value="c1"> <b>C.</b> 134</label><br>
+            <label><input type="radio" name="q1" value="d1"> <b>D.</b> 269</label>
+        </div>
+
+        <button type="submit">Submit</button>
+    </form>
+
+    {% if results %}
+        <h2>Results</h2>
+        <p class="{{ results.q1 }}">{{ feedback.q1 }}</p>
+        <h3>Your score: {{ score }}/1</h3>
+        {% endif %}
+    
+</body>
+</html>

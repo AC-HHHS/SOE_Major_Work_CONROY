@@ -1,10 +1,17 @@
 from flask import Flask, render_template, request, redirect
+from flask_sqlalchemy import SQLAlchemy
 from waitress import serve
 import sqlite3
 import os
 
+from sqlalchemy.sql import func
+
 app = Flask(__name__) # Creates an instance of the Flask objected called "__name__"
 app.secret_key = os.urandom(24) # Assigning a key to encrypt flask data that is stored in cookies
+
+ANSWER_KEY = {
+    "q1": "b1"
+}
 
 @app.route('/') # A route that triggers the function login()
 def login():
@@ -55,6 +62,32 @@ def add_user():
         connection.commit() # Commits the changes to the database
         connection.close() # Closes the connection to the database
         return render_template('login.html') # Renders the login.html template after successfully adding a new user
-    
+
+@app.route('/firstquiz')
+def quiz():
+    return render_template('quizPage.html')
+
+@app.route('/quiz', methods=["GET", "post"])
+def quiz_view():
+    if request.method == "post":
+        user_answers = {
+            "q1": request.form.get("q1")
+        }
+
+        feedback = {}
+        results = {}
+        score = 0
+        total_questions = len(ANSWER_KEY)
+
+        for q, correct in ANSWER_KEY.items():
+            if user_answers.get(q) == correct:
+                feedback[q] = f"{q.upper()} is correct!"
+                results[q] = "correct"
+                score += 1
+            else:
+                feedback[q] = f"{q.upper()} is incorrect."
+                results[q]  = "incorrect"
+
+  
 if __name__ == '__main__':
     serve(app, host='0.0.0.0', port=8080) # Starts the Flask application using the Waitress WSGI server, listening on all available network interfaces (
