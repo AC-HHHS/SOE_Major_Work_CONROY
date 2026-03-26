@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <h2>User Management</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Admin?</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+    <tbody>
+            {% for u in users %}
+                <tr>
+                    <td>{{ u[0] }} {{ u[1] }}</td>
+                    <td>{{ u[2] }}</td>
+                    <td>{{ "Yes" if u[3] == 1 else "No" }}</td>
+                    <td>
+                        {% if u[3] == 0 %}
+                            <a href="{{ url_for('make_admin', email=u[2]) }}">Make Admin</a>
+                        {% endif %}
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>

@@ -1,17 +1,13 @@
-from flask import Flask, render_template, request, redirect
+from flask import Flask, render_template, request, redirect, url_for, session
 from flask_sqlalchemy import SQLAlchemy
 from waitress import serve
 import sqlite3
 import os
 
-from sqlalchemy.sql import func
+
 
 app = Flask(__name__) # Creates an instance of the Flask objected called "__name__"
 app.secret_key = os.urandom(24) # Assigning a key to encrypt flask data that is stored in cookies
-
-ANSWER_KEY = {
-    "q1": "b1"
-}
 
 @app.route('/') # A route that triggers the function login()
 def login():
@@ -66,28 +62,78 @@ def add_user():
 @app.route('/firstquiz')
 def quiz():
     return render_template('quizPage.html')
-
-@app.route('/quiz', methods=["GET", "post"])
-def quiz_view():
-    if request.method == "post":
-        user_answers = {
-            "q1": request.form.get("q1")
-        }
-
-        feedback = {}
-        results = {}
-        score = 0
-        total_questions = len(ANSWER_KEY)
-
-        for q, correct in ANSWER_KEY.items():
-            if user_answers.get(q) == correct:
-                feedback[q] = f"{q.upper()} is correct!"
-                results[q] = "correct"
-                score += 1
-            else:
-                feedback[q] = f"{q.upper()} is incorrect."
-                results[q]  = "incorrect"
-
   
+
+@app.route("/admin")
+def admin():
+    if not session.get("is_admin"):
+        return redirect(url_for("login"))
+    # Fetch collected DATA from CollectedData.db
+    data_conn = sqlite3.connect("questionBank.db")
+    data_cursor = data_conn.cursor()
+
+    data_cursor.execute("SELECT * FROM DATA")
+    data_rows = data_cursor.fetchall()
+    data_columns = [description[0] for description in data_cursor.description]
+    data_conn.close()
+
+    # Fetch USERS from the login database
+    users_conn = sqlite3.connect("LoginData.db")
+    users_cursor = users_conn.cursor()
+    users_cursor.execute("SELECT first_name, last_name, email, is_admin FROM USERS")
+    users = users_cursor.fetchall()
+    users_conn.close()
+
+    return render_template(
+        "teacherHome.html",
+        data_rows=data_rows,
+        data_columns=data_columns,
+        users=users
+    )
+
+@app.route('/logout')
+def logout():
+    session.clear()
+    return redirect(url_for("login"))
+
+@app.route("/make_admin/<email>")
+def make_admin(email):
+    if not session.get("is_admin"):
+        return redirect(url_for("login"))
+
+    connection = sqlite3.connect("LoginData.db")
+    cursor = connection.cursor()
+
+    cursor.execute(
+        "UPDATE USERS SET is_admin = 1 WHERE email = ?", 
+        (email,)
+    )
+
+    connection.commit()
+    connection.close()
+
+    return redirect(url_for("admin"))
+
+@app.route("/admin/users")
+def admin_users():
+    if not session.get("is_admin"):
+        return redirect(url_for('login'))
+    
+    connection = sqlite3.connect("LoginData.db")
+    cursor = connection.cursor()
+
+    users = cursor.execute(
+        "SELECT first_name, last_name, email, is_admin FROM USERS"
+    ).fetchall()
+
+    connection.close()
+
+    return render_template("teacherHome.html", users=users) 
+
+@app.route('/usermanagement')
+def user_management():
+    return render_template('studentManagement.html')
+
+
 if __name__ == '__main__':
     serve(app, host='0.0.0.0', port=8080) # Starts the Flask application using the Waitress WSGI server, listening on all available network interfaces (
