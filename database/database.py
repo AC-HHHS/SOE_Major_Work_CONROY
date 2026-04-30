@@ -1,6 +1,7 @@
 import sqlite3
+from werkzeug.security import generate_password_hash   
 
-connection = sqlite3.Connection('LoginData.db') #Creates a python connection to a database called 'LoginData.db'
+connection = sqlite3.Connection('database/LoginData.db') #Creates a python connection to a database called 'LoginData.db'
 cursor = connection.cursor() #Creates a cursor object that python can point to, to reference the database
 
 cmd1 = '''CREATE TABLE IF NOT EXISTS users (id INTEGER primary key AUTOINCREMENT,
@@ -12,8 +13,11 @@ cmd1 = '''CREATE TABLE IF NOT EXISTS users (id INTEGER primary key AUTOINCREMENT
                                             is_admin BOOLEAN DEFAULT FALSE)''' # Creates a string called cmd1 whihc specifies SQL instructions to create a table with 4 fields each of type variable characters with a max length of 50
 cursor.execute(cmd1) # executes the string variable cmd1 against the database
 
-cmd2 = """INSERT INTO USERS (id, first_name, last_name, email, password, level, is_admin) VALUES (1, 'tester', 'test', 'tester@gmail.com', 'testerP', 1, FALSE)""" # is a string that specifies adding a record to the database
-cursor.execute(cmd2)
+hashed_password = generate_password_hash("testerP") # Hashes the password "testerP" using the generate_password_hash function from the werkzeug.security module
+
+cmd2 = """INSERT INTO users (first_name, last_name, email, password, level, is_admin) 
+          VALUES (?, ?, ?, ?, ?, ?)"""  # ✅ use parameterised query for safety
+cursor.execute(cmd2, ('tester', 'test', 'tester@education.nsw.gov.au', hashed_password, 1, False))
 connection.commit() # updates the database with this new record
 
 ans = cursor.execute("SELECT * FROM users").fetchall()

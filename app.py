@@ -7,8 +7,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 
 
 app = Flask(__name__) # Creates an instance of the Flask objected called "__name__"
-app.secret_key = os.urandom(24) # Assigning a key to encrypt flask data that is stored in cookies
-
+app.secret_key = 'secret_key' # Sets the secret key for the Flask application, which is used for securely signing the session cookie
 @app.route('/') # A route that triggers the function login()
 def login():
     return render_template('login.html') # Renders the login.html template when the user visits the root URL
@@ -29,7 +28,7 @@ def login_validation():
         if user and check_password_hash(user[1], password): # Checks if a user was found and if the provided password matches the hashed password stored in the database
             session['user_id'] = user[0] # Stores the user's id in the session
             session['is_admin'] = user[2] # Stores the user's is_admin status in the session        
-            return redirect(url_for('dashboard')) # Redirects the user to the dashboard page if the login is successful 
+            return redirect(url_for('home')) # Redirects the user to the dashboard page if the login is successful 
 
         return "Invalid Login"
     return render_template('login.html')
@@ -37,13 +36,18 @@ def login_validation():
 
         
         
-@app.route('/home') # A route that triggers the function home() when a GET request is made to the URL "/home"
+@app.route('/dashboard')
 def home():
-    fname = request.args.get('fname') # Retrieves the value of the "fname" query parameter from the URL
-    lname = request.args.get('lname') 
-    email = request.args.get('email') 
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
 
-    return render_template('dashboard.html', fname=fname, lname=lname, email=email) # Renders the home.html template and passes the first name, last name, and email as variables to be used in the template
+    connection = sqlite3.connect('database/LoginData.db')
+    cursor = connection.cursor()
+    cursor.execute('SELECT first_name, last_name, email FROM users WHERE id=?', (session['user_id'],))
+    user = cursor.fetchone()
+    connection.close()
+
+    return render_template('dashboard.html', first_name=user[0], last_name=user[1], email=user[2]) 
 
 @app.route('/register') # A route that triggers the function signUp() when a GET request is made to the URL "/signUp"
 def register():
@@ -52,9 +56,9 @@ def register():
 @app.route('/add_user', methods=['GET', 'POST']) # A route that triggers the function add_user() when a POST request is made to the URL "/add_user"
 def add_user():
     if request.method == 'POST': # Checks if the request method is POST
-        fname = request.form.get('fname') # Retrieves the value of the "fname" field from the submitted form data
-        lname = request.form.get('lname') 
-        email = request.form.get('email') 
+        first_name = request.form.get('first_name') # Retrieves the value of the "first_name" field from the submitted form data
+        last_name = request.form.get('last_name')
+        email = request.form.get('email')
         password = request.form.get('password') # Retrieves the value of the "password" field from the submitted form data
 
         if not email.endswith('@education.nsw.gov.au'):
@@ -62,18 +66,18 @@ def add_user():
         
         hashed_password = generate_password_hash(password) # Hashes the password using the generate_password_hash function from the werkzeug.security module
 
-    connection = sqlite3.connect('database/LoginData.db') # Establishes a connection to the SQLite database named "LoginData.db"
-    cursor = connection.cursor() # Creates a cursor object to interact with the database
+        connection = sqlite3.connect('database/LoginData.db') # Establishes a connection to the SQLite database named "LoginData.db"
+        cursor = connection.cursor() # Creates a cursor object to interact with the database
 
-    ans = cursor.execute('SELECT * FROM users WHERE email=? AND password=?', (email, hashed_password)).fetchall() # Executes a SQL query to check if there is already a user in the "users" table with the provided email and password
-    if len(ans) > 0: # If a user is found (i.e., the length of the ans list is greater than 0)    cursor.execute('INSERT INTO users (fname, lname, email, password) VALUES (?, ?, ?, ?)', (fname, lname, email, hashed_password)) # Executes a SQL query to insert a new user into the "users" table with the provided first name, last name, email, and password
-        connection.close() # Closes the connection to the database
-        return render_template('login.html') # Renders the login.html template if the user already exists
-    else:
-        cursor.execute('INSERT INTO users (fname, lname, email, password) VALUES (?, ?, ?, ?)', (fname, lname, email, password)) # Executes a SQL query to insert a new user into the "users" table with the provided first name, last name, email, and password
-        connection.commit() # Commits the changes to the database
-        connection.close() 
-        return render_template('login.html') # Renders the login.html template after successfully adding a new user
+        ans = cursor.execute('SELECT * FROM users WHERE email=?', (email,)).fetchall() # Executes a SQL query to check if there is already a user in the "users" table with the provided email
+        if len(ans) > 0: # If a user is found (i.e., the length of the ans list is greater than 0)
+            connection.close() # Closes the connection to the database
+            return render_template('login.html') # Renders the login.html template if the user already exists
+        else:
+            cursor.execute('INSERT INTO users (first_name, last_name, email, password) VALUES (?, ?, ?, ?)', (first_name, last_name, email, hashed_password)) # Executes a SQL query to insert a new user into the "users" table with the provided first name, last name, email, and password
+            connection.commit() # Commits the changes to the database
+            connection.close() 
+    return render_template('login.html') # Renders the login.html template after successfully adding a new user
 
 @app.route('/firstquiz')
 def quiz():
@@ -85,7 +89,7 @@ def admin():
     if not session.get("is_admin"):
         return redirect(url_for("login"))
     # Fetch collected DATA from CollectedData.db
-    data_conn = sqlite3.connect("questionBank.db")
+    data_conn = sqlite3.connect("database/CollectedData.db")
     data_cursor = data_conn.cursor()
 
     data_cursor.execute("SELECT * FROM DATA")
@@ -94,9 +98,9 @@ def admin():
     data_conn.close()
 
     # Fetch USERS from the login database
-    users_conn = sqlite3.connect("LoginData.db")
+    users_conn = sqlite3.connect("database/LoginData.db")
     users_cursor = users_conn.cursor()
-    users_cursor.execute("SELECT first_name, last_name, email, is_admin FROM USERS")
+    users_cursor.execute("SELECT first_name, last_name, email, is_admin FROM users")
     users = users_cursor.fetchall()
     users_conn.close()
 
@@ -117,11 +121,11 @@ def make_admin(email):
     if not session.get("is_admin"):
         return redirect(url_for("login"))
 
-    connection = sqlite3.connect("LoginData.db")
+    connection = sqlite3.connect("database/LoginData.db")
     cursor = connection.cursor()
 
     cursor.execute(
-        "UPDATE USERS SET is_admin = 1 WHERE email = ?", 
+        "UPDATE users SET is_admin = True WHERE email = ?", 
         (email,)
     )
 
@@ -135,11 +139,11 @@ def admin_users():
     if not session.get("is_admin"):
         return redirect(url_for('login'))
     
-    connection = sqlite3.connect("LoginData.db")
+    connection = sqlite3.connect("database/LoginData.db")
     cursor = connection.cursor()
 
     users = cursor.execute(
-        "SELECT first_name, last_name, email, is_admin FROM USERS"
+        "SELECT first_name, last_name, email, is_admin FROM users"
     ).fetchall()
 
     connection.close()
