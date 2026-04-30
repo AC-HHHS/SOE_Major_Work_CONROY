@@ -11,6 +11,8 @@
     <h1>Welcome, {{ fname }} {{ lname }}</h1>
     <h2> Email: {{ email }}</h2>
     <img class = "showUser">
+    <a href="/userManagement"><button>Manage Users</button></a>
+    <a href="{{ url_for('logout') }}">Logout</a>
     </main>
 </body>
 </html>

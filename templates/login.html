@@ -4,17 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
-    <title>Document</title>
+    <title>Login/title>
 </head>
 <body>
   <main>
     <form method ="post" action="/login_validation">
-        <input type = "email" name = "email" placeholder = "Enter email"><br>
-        <input type = "password" name = "password" placeholder = "Enter password"><br>
+        <input type = "email" name = "email" placeholder = "DOE Email"><br>
+        <input type = "password" name = "password" placeholder = "Password"><br>
         <button type = "submit" value = "login">Login</button>
     </form>
-    <p>Don't have an account? <br> <a href = "/signUp">Sign Up</a></p>
-    <img class = "UnknownUser">
+    <p>Don't have an account? <br> <a href = "/register">Register</a></p>
   </main>  
 </body>
 </html>
