@@ -3,31 +3,81 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>First Quiz</title>
+    <title>Quiz</title>
 </head>
 <body>
-    <h1> Practice Quiz for Mod 5: Equilibrium and Acid Reactions</h1>
+    <main>
+        <h1>{{ topic }} Quiz</h1>
 
-    <form method="post" action="/quiz">
-        <div>
-            <p>1. At equilibrium, a 1.00L vessel contains 0.0430 mol of <b>H<sub>2</sub></b>, 0.0620 mol of <b>I<sub>2</sub></b>, and 0.358 mole of <b>HI</b>. The system is represented by the following equation:<br>
-            <b>H<sub>2</sub> (g) + I<sub>2</sub> (g) = 2HI (g)</b> <br>
-            Which of the following is closest to the value of the equilibrium constant, <b>K<sub>eq</sub></b>, for this reaction?</p>
-
-            <label><input type="radio" name="q1" value="a1"> <b>A.</b> 0.0208</label><br>
-            <label><input type="radio" name="q1" value="b1"> <b>B.</b> 48.1</label><br> 
-            <label><input type="radio" name="q1" value="c1"> <b>C.</b> 134</label><br>
-            <label><input type="radio" name="q1" value="d1"> <b>D.</b> 269</label>
+        <div id="quiz-container">
+            {% for question in questions %}
+                <div class ="question-card" id="question-{{ loop.index}}" style = "display:none;"> // Creates a div for each question in the questions list, with a unique id based on the loop index and initially hidden using CSS
+                    <h3>Question {{ loop.index }} of {{ questions|length }}</h3> // Displays the current question number and total number of questions using Jinja2 templating syntax
+                <p>{{ question[1] }}</p> // Displays the question text, which is assumed to be in the second element of the question tuple
+                <button class="option-btn" onclick="selectAnswer({{ question[0] }}, '{{ question [2] }}')">{{ question[2] }}</button> // Creates a button for the first answer option, which calls the selectAnswer JavaScript function with the question ID and the answer text when clicked
+                <button class="option-btn" onclick="selectAnswer({{ question[0] }}, '{{ question [3] }}')">{{ question[3] }}</button> 
+                <button class="option-btn" onclick="selectAnswer({{ question[0] }}, '{{ question [4] }}')">{{ question[4] }}</button> 
+                <button class="option-btn" onclick="selectAnswer({{ question[0] }}, '{{ question [5] }}')">{{ question[5] }}</button>
+                </div>
+            {% endfor %}
         </div>
-
-        <button type="submit">Submit</button>
-    </form>
-
-    {% if results %}
-        <h2>Results</h2>
-        <p class="{{ results.q1 }}">{{ feedback.q1 }}</p>
-        <h3>Your score: {{ score }}/1</h3>
-        {% endif %}
+        // Timer Display
+        <p>Time: <span id="timer">0</span>s</p>
+    </main>
     
+    <script>
+        let currentQuestion = 1; //Initializes a variable to keep track of the current question index
+        const totalQuestions = {{ questions|length }}; // Gets the total number of questions from the Jinja2 template variable
+        let questionStartTime = Date.now(); // Records the start time of the current question
+        let answers = {}; // Initializes an object to store the user's answers
+        let timerInterval; // Initializes a variable to store the timer interval
+
+        function showQuestion(n) { 
+            document.getElementById('question-' + n).style.display = 'block'; // Shows the question card with the corresponding index by changing its CSS display property to 'block'
+            questionStartTime = Date.now(); // Resets the question start time to the current time whenever a new question is shown
+            startTimer(); // Starts the timer for the current question by calling the startTimer function
+        }
+
+        function startTimer() {
+            clearInterval(timerInterval); // Clears any existing timer interval to prevent multiple timers from running simultaneously
+            document.getElementById('timer').textContent = '0'; // Resets the timer display to 0 seconds at the start of each question
+            timerInterval = setInterval(() => { // Sets up a new timer interval that updates every second
+                let elapsed = Math.floor((Date.now() - questionStartTime) / 1000); // Calculates the elapsed time in seconds by subtracting the question start time from the current time and dividing by 1000 to convert milliseconds to seconds
+                document.getElementById('timer').textContent = elapsed; // Updates the timer display with the elapsed time
+            }, 1000); // Updates the timer every 1000 milliseconds (1 second)
+        }
+
+        // Called when user clicks an answer option
+        function selectAnswer(questionId, selectedOption) {
+            clearInterval(timerInterval);
+            let timeTaken = (Date.now() - questionStartTime) / 1000; // Time in seconds
+
+            // Store the answer and time taken for this question
+            answers[questionId] = { answer: selectedOption, time: timeTaken};
+
+            // Hide current question and move on to the next one
+            document.getElementById('question-' + currentQuestion).style.display = 'none';
+            currentQuestion++; // Move to the next question index
+
+            if (currentQuestion <= totalQuestions) {
+                showQuestion(currentQuestion);
+            }
+            else {
+                submitQuiz(); // If all questions have been answered, submit the quiz results
+            }               
+        }
+
+        function submitQuiz() {
+            fetch('/submit_quiz', { method: 'POST', headers: { 'Content-Type': 'application/json'}, body: JSON.stringify({ answers: answers, topic: '{{ topic }}' }) })
+                .then(response => response.json())
+                .then(data => { window.location.href = '/results/' + data.results_id; }) // Redirects to the results page with the results ID returned from the server
+
+        }
+
+        // Start the quiz once the page loads
+        showQuestion(1);
+
+    </script>
+        
 </body>
 </html>

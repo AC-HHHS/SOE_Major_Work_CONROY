@@ -154,6 +154,22 @@ def admin_users():
 def user_management():
     return render_template('studentManagement.html')
 
+@app.route('/quiz/<topic>')
+def quiz(topic):
+    if 'user_id' not in session: # Checks if the user is not logged in (i.e., there is no "user_id" in the session)
+        return redirect(url_for('login'))
+
+    user_level = session.get('level', 1) # Get the user's level from the session, defaulting to 1 if not set
+
+    connection = sqlite3.connect('database/Questions.db')
+    cursor = connection.cursor()    
+
+    cursor.execute('SELECT id, question_text, option_a, option_b, option_c, option_d FROM questions WHERE topic=? AND level=? ORDER BY RANDOM () LIMIT 5', (topic, user_level)) # Executes a SQL query to retrieve 5 random questions from the "questions" table that match the specified topic and user level  
+    questions = cursor.fetchall() 
+    connection.close() 
+
+    return render_template('quizPage.html', questions=questions, topic=topic) # Renders the quizPage.html template, passing the retrieved questions and topic as context variables
+
 
 if __name__ == '__main__':
     app.run(debug=True)
