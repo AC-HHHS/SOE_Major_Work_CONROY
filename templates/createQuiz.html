@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add Questions</title>
+</head>
+<body>
+    <main>
+        <a href="/admin"> Back to Dashboard</a>
+
+        #Creating a new quiz
+        <h2> Create A New Quiz</h2>
+        <form method="POST" action="/add_quiz">
+            <input type="text" name="name" placeholder="Quiz Name" required><br>
+            <input type="text" name="topic" placeholder="Topic (e.g. Module 5: Equilibrium)" required><br>
+            <select name="level" required>
+                <option value="" disabled selected>Select Level</option>
+                <option value="1">Level 1 </option>
+                <option value="2">Level 2 </option>
+                <option value="3">Level 3 </option>
+                <option value="4">Level 4 </option>
+                <option value="5">Level 5 </option>
+            </select><br>
+            <button type="submit">Create Quiz</button>
+        </form>
+
+        <hr> # Cool break that seperates sections
+
+        <h2> Add a Question</h2>
+        <form method = "POST" action="/add_question">
+            <select name="quiz_id" required>
+                <option value="" disabled selected>Select Quiz</option>
+                {% for quiz in quizzes %}
+                    <option value="{{ quiz[0] }}">{{ quiz[1] }} ({{ quiz[2] }}), Level {{ quiz[3] }}</option>
+                {% endfor %}
+            </select><br>
+            <input type="text" name="topic" placeholder="Topic" required><br>
+
+            <select name="level" required>
+                <option value="" disabled selected>Select Level</option>
+                <option value="1">Level 1 </option>
+                <option value="2">Level 2 </option>
+                <option value="3">Level 3 </option>
+                <option value="4">Level 4 </option>
+                <option value="5">Level 5 </option>
+                </select><br>
+
+                <textarea name="question_text" placeholder="Enter your question here..." required></textarea><br>
+
+                <input type="text" name="option_a" placeholder="Option A" required><br>
+                <input type="text" name="option_b" placeholder="Option B" required><br>
+                <input type="text" name="option_c" placeholder="Option C" required><br>
+                <input type="text" name="option_d" placeholder="Option D" required><br>
+
+                <select name="correct_answer" required>
+                    <option value="" disabled selected>Select Correct Answer</option>
+                    <option value="A">Option A</option>
+                    <option value="B">Option B</option>
+                    <option value="C">Option C</option>
+                    <option value="D">Option D</option>
+                </select><br>
+
+                <button type="submit">Add Question</button>
+        </form>
+
+    </main>
+</body>
+</html>

@@ -16,8 +16,8 @@ cursor.execute(cmd1) # executes the string variable cmd1 against the database
 hashed_password = generate_password_hash("testerP") # Hashes the password "testerP" using the generate_password_hash function from the werkzeug.security module
 
 cmd2 = """INSERT INTO users (first_name, last_name, email, password, level, is_admin) 
-          VALUES (?, ?, ?, ?, ?, ?)"""  # ✅ use parameterised query for safety
-cursor.execute(cmd2, ('tester', 'test', 'tester@education.nsw.gov.au', hashed_password, 1, False))
+          VALUES (?, ?, ?, ?, ?, ?)"""  # use parameterised query for safety
+cursor.execute(cmd2, ('tester', 'test', 'tester@education.nsw.gov.au', hashed_password, 1, True))
 connection.commit() # updates the database with this new record
 
 ans = cursor.execute("SELECT * FROM users").fetchall()

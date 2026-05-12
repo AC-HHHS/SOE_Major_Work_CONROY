@@ -28,13 +28,11 @@ def login_validation():
         if user and check_password_hash(user[1], password): # Checks if a user was found and if the provided password matches the hashed password stored in the database
             session['user_id'] = user[0] # Stores the user's id in the session
             session['is_admin'] = user[2] # Stores the user's is_admin status in the session        
-            return redirect(url_for('home')) # Redirects the user to the dashboard page if the login is successful 
+            return redirect(url_for('teacher_home')) # Redirects the user to the dashboard page if the login is successful 
 
         return "Invalid Login"
     return render_template('login.html')
-
-
-        
+   
         
 @app.route('/dashboard')
 def home():
@@ -48,6 +46,20 @@ def home():
     connection.close()
 
     return render_template('dashboard.html', first_name=user[0], last_name=user[1], email=user[2]) 
+
+# Pracctice code for teacher dashboard - to be deleted later
+@app.route('/teacher_dashboard')
+def teacher_home():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+
+    connection = sqlite3.connect('database/LoginData.db')
+    cursor = connection.cursor()
+    cursor.execute('SELECT first_name, last_name, email FROM users WHERE id=?', (session['user_id'],))
+    user = cursor.fetchone()
+    connection.close()
+
+    return render_template('teacherHome.html', first_name=user[0], last_name=user[1], email=user[2]) 
 
 @app.route('/register') # A route that triggers the function signUp() when a GET request is made to the URL "/signUp"
 def register():
@@ -79,9 +91,6 @@ def add_user():
             connection.close() 
     return render_template('login.html') # Renders the login.html template after successfully adding a new user
 
-@app.route('/firstquiz')
-def quiz():
-    return render_template('quizPage.html')
   
 
 @app.route("/admin")
@@ -154,22 +163,59 @@ def admin_users():
 def user_management():
     return render_template('studentManagement.html')
 
-@app.route('/quiz/<topic>')
-def quiz(topic):
-    if 'user_id' not in session: # Checks if the user is not logged in (i.e., there is no "user_id" in the session)
-        return redirect(url_for('login'))
 
-    user_level = session.get('level', 1) # Get the user's level from the session, defaulting to 1 if not set
+@app.route('/add_quiz', methods=['POST'])
+def add_quiz():
+    if not session.get('is_admin'):
+        return redirect(url_for('login'))
+    
+    name = request.form.get('name')
+    topic = request.form.get('topic')
+    level = request.form.get('level')
 
     connection = sqlite3.connect('database/Questions.db')
-    cursor = connection.cursor()    
+    cursor = connection.cursor()
+    cursor.execute('INSERT INTO quizzes (name, topic, level) VALUES (?, ?, ?)', (name, topic, level))
+    connection.commit()
+    connection.close()
 
-    cursor.execute('SELECT id, question_text, option_a, option_b, option_c, option_d FROM questions WHERE topic=? AND level=? ORDER BY RANDOM () LIMIT 5', (topic, user_level)) # Executes a SQL query to retrieve 5 random questions from the "questions" table that match the specified topic and user level  
-    questions = cursor.fetchall() 
-    connection.close() 
+@app.route('/add_question_page')
+def add_question_page():
+    if not session.get('is_admin'):
+        return redirect(url_for('login'))
+    
+    connection = sqlite3.connect('database/Questions.db')
+    cursor = connection.cursor()
+    quizzes = cursor.execute('SELECT * FROM quizzes').fetchall()
+    connection.close()
 
-    return render_template('quizPage.html', questions=questions, topic=topic) # Renders the quizPage.html template, passing the retrieved questions and topic as context variables
+    return render_template('createQuiz.html', quizzes=quizzes)
 
+@app.route('/add_question', methods=['POST'])
+def add_question():
+    if not session.get('is_admin'):
+        return redirect(url_for('login'))
+    
+    quiz_id = request.form.get('quiz_id')
+    topic = request.form.get('topic')
+    level = request.form.get('level')
+    question_text = request.form.get('question_text')
+    option_a = request.form.get('option_a')
+    option_b = request.form.get('option_b')
+    option_c = request.form.get('option_c')
+    option_d = request.form.get('option_d')
+    correct_answer = request.form.get('correct_answer')
+
+    options = {'A': option_a, 'B': option_b, 'C': option_c, 'D': option_d}
+    correct_text = options[correct_answer]
+
+    connection = sqlite3.connect('database/Questions.db')
+    cursor = connection.cursor()
+    cursor.execute('INSERT INTO questions (quiz_id, topic, level, question_text, option_a, option_b, option_c, option_d, correct_answer) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', (quiz_id, topic, level, question_text, option_a, option_b, option_c, option_d, correct_answer))
+    connection.commit()
+    connection.close()
+
+    return redirect(url_for('add_question_page'))
 
 if __name__ == '__main__':
     app.run(debug=True)
