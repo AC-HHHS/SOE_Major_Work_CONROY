@@ -17,7 +17,7 @@ hashed_password = generate_password_hash("testerP") # Hashes the password "teste
 
 cmd2 = """INSERT INTO users (first_name, last_name, email, password, level, is_admin) 
           VALUES (?, ?, ?, ?, ?, ?)"""  # use parameterised query for safety
-cursor.execute(cmd2, ('tester', 'test', 'tester@education.nsw.gov.au', hashed_password, 1, True))
+cursor.execute(cmd2, ('tester', 'test', 'tester@education.nsw.gov.au', hashed_password, 1, False))
 connection.commit() # updates the database with this new record
 
 ans = cursor.execute("SELECT * FROM users").fetchall()

@@ -3,7 +3,9 @@ from waitress import serve
 import sqlite3
 import os
 import time
+from datetime import date
 from werkzeug.security import generate_password_hash, check_password_hash
+import json
 
 
 app = Flask(__name__) # Creates an instance of the Flask objected called "__name__"
@@ -159,9 +161,9 @@ def admin_users():
 
     return render_template("teacherHome.html", users=users) 
 
-@app.route('/usermanagement')
+@app.route("/usermanagement")
 def user_management():
-    return render_template('studentManagement.html')
+    return render_template("studentManagement.html")
 
 
 @app.route('/add_quiz', methods=['POST'])
@@ -211,11 +213,92 @@ def add_question():
 
     connection = sqlite3.connect('database/Questions.db')
     cursor = connection.cursor()
-    cursor.execute('INSERT INTO questions (quiz_id, topic, level, question_text, option_a, option_b, option_c, option_d, correct_answer) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', (quiz_id, topic, level, question_text, option_a, option_b, option_c, option_d, correct_answer))
+    cursor.execute("INSERT INTO questions (quiz_id, topic, level, question_text, option_a, option_b, option_c, option_d, correct_answer) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", (quiz_id, topic, level, question_text, option_a, option_b, option_c, option_d, correct_answer))
     connection.commit()
     connection.close()
 
     return redirect(url_for('add_question_page'))
+
+@app.route('/quiz/<int:quiz_id>')
+def quiz(quiz_id):
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    connection = sqlite3.connect('database/Questions.db')
+    cursor = connection.cursor()
+
+    #get the quiz
+    quiz = cursor.execute('SELECT * FROM quizzes WHERE id = ?', (quiz_id,)).fetchone()
+
+    questions = cursor.execute("""SELECT id, question_text, option_a, option_b, option_c, option_d FROM questions WHERE quiz_id = ?""", (quiz_id,)).fetchall()
+    connection.close()\
+    
+    return render_template('quiz.html', questions=questions, quiz=quiz)
+
+@app.route('/submit_quiz', methods=['POST'])
+def submit_quiz():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    data = request.get_json()
+    answers = data['answers']
+    quiz_id = data['quiz_id']
+
+    questions_conn = sqlite3.connect('database/Questions.db')
+    cursor = questions_conn.cursor()
+
+    correct_answers = cursor.execute('SELECT id, question_text, correct_answer FROM questions WHERE quiz_id = ?', (quiz_id,)).fetchall()
+    questions_conn.close()
+
+    total = len(correct_answers)
+    correct_count = 0
+    total_time = 0
+    wrong_questions = []
+
+    for question in correct_answers:
+        q_id = str(question[0])
+        q_text = question[1]
+        correct = question[2]
+
+        if q_id in answers:
+            user_answer = answers[q_id]['answer']
+            time_taken = answers[q_id]['time']
+            total_time += time_taken
+
+            if user_answer == correct:
+                correct_count += 1
+            else:
+                wrong_questions.append({'question': q_text, 'correct_answer': correct, 'your_answer': user_answer})
+
+    accuracy = round((correct_count / total) * 100, 1)
+    avg_time = round(total_time / total, 1)
+
+    login_conn = sqlite3.connect('database/LoginData.db')
+    login_cursor = login_conn.cursor()
+
+    login_cursor.execute("""CREATE TABLE IF NOT EXISTS results (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER,
+        quiz_id INTEGER,
+        score REAL,
+        accuracy REAL,
+        avg_time REAL,
+        wrong_questions TEXT, 
+        date TEXT
+    )""")
+
+    login_cursor.execute("INSERT INTO results (user_id, quiz_id, score, accuracy, avg_time, wrong_questions, date) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        (session['user_id'], quiz_id, correct_count, accuracy, avg_time, json.dumps(wrong_questions), str(date.today())))
+    login_conn.commit()
+
+    result_id = login_cursor.lastrowid
+    login_conn.close()
+
+    return json.dumps({'result_id': result_id})
+
+
+
+
 
 if __name__ == '__main__':
     app.run(debug=True)

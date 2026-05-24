@@ -1,3 +1,8 @@
+@import url(https://fonts.googleapis.com/css?family=Cinzel+Decorative);
+@import url(https://fonts.googleapis.com/css?family=Metamorphous);
+@import url(https://fonts.goolgeapis.com/css?family=Macondo);
+
+
 * {
     margin: 0;
     padding: 0;
@@ -7,18 +12,12 @@ body {
     min-height: 100vh;
     justify-content: center;
     align-items: center;
-    background-image: 
-            linear-gradient(
-                to bottom,
-                #dcdcdc 50%
-                #e9e9e9 50%
-                )
-                ;
+    background-image: linear-gradient(to bottom, #810000, #1b1717);
     font-family: sans-serif;
 }
 
 main{
-    background-color: #e9e9e9;
+    background-color: #eeebdd;
     width: 500px;
     height: 700px;
     margin-top: 10%;
@@ -40,7 +39,6 @@ main form input{
     height: 40px;
     border-radius: 20px;
     border: none;
-    background-color: #dcdcdc;
     padding-left: 20px;
     box-sizing: border-box;
 }
@@ -73,15 +71,18 @@ main form button{
     font-weight: bold;
     background-color: yellowgreen;
     margin-bottom: 30px;
+    background-image: linear-gradient(to right, #ff3333, #810000);
+    font-size: 20px;
 }
 
 main p {
     margin-top: 30px;
     font-size: 25px;
     font-weight: bold;
-    color: brown; 
+    color: black; 
     text-align: center;
     align-items: center;
+    
 }
 
 main .showUser{
@@ -95,6 +96,10 @@ main .showUser{
     background-size: cover;
     border-radius: 50%;
     margin-top: 20%
+}
+
+p {
+    font-family: Metamorphous;
 }
 
 main h1, h2 {
@@ -113,4 +118,29 @@ main .UnknownUser{
     background-size: cover;
     margin-top: 40px;
     border-radius: 50%;
+}  
+
+h2 {
+  background-image: linear-gradient(to right, #ff3333, #810000);
+  background-clip: text;
+  color:transparent;
+  padding: 20px;
+  font-size: 50px;
+  font-family: Cinzel Decorative;
+}
+  
+a {
+    color: #810000;
+    text-decoration: underline;
+    font-family: Macondo;
+}
+  
+a:hover {
+    color: #1b1717;
+    text-decoration: none;
+    
+}
+
+button {
+    font-family: macondo;
 }

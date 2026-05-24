@@ -1,0 +1,84 @@
+@import url(https://fonts.googleapis.com/css?family=Cinzel+Decorative);
+@import url(https://fonts.googleapis.com/css?family=Metamorphous);
+@import url(https://fonts.goolgeapis.com/css?family=Macondo);
+
+body {
+    background-color: #eeebdd;
+    font-family: Metamorphous;
+    margin: 0;
+    padding: 0;
+}
+main {
+    color: #1b1717;
+    padding: 20px;
+    font-family: Metamorphous;
+}
+
+div {
+    display: block;
+    align-content: center;
+}
+
+.banner  {
+    background-image: linear-gradient(to right, #Ff3333, #810000);
+    font-family: Cinzel Decorative;
+    text-align: right;
+    padding: 10px;
+    position: sticky;
+    width: 100%;
+    margin-bottom: 0px;
+}
+
+div:banner-content {
+    padding: 40px;
+    margin-bottom: 0px;
+}
+
+a {
+    color: #EEEBDD;
+    text-decoration: underline;
+    padding-left: 5px;
+}
+  
+a:hover {
+    color: #1b1717;
+    opacity:75%;
+}
+
+h2 {
+    text-decoration: underline;
+    text-decoration-thickness: 2px;
+    text-align: center;
+    color: #810000;
+}
+
+input {
+    padding: 5px;
+    background-color: white;
+    font-family: Macondo;
+    border-radius: 10px;
+    border: 2px solid #810000;
+    color: #1b1717;
+    margin: 3px;
+
+}
+
+button {
+    background-color: #810000;
+    font-family: Macondo;
+    border-radius: 8px;
+    border-color: #810000;
+    color: #EEEBDD;
+    padding: 8px;
+    margin: 3px;
+}
+
+button:hover {
+    background-color: #FF3333;
+}
+
+select {
+    border: 1px solid #810000;
+    font-family: Macondo;
+    font-size: 15px;
+}
