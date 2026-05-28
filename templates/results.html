@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Results</title>
+
+</head>
+<body>
+     
+        <div class="banner">
+            <div class="banner-content">
+                <a href="{{ url_for('logout') }}">Log Out</a>   
+                <a href="/dashboard"> Back to Dashboard</a>
+            </div>
+        </div>
+
+        <main>
+        <h1>Quiz Results</h1>
+        <p> Date: {{ date }}</p>\
+
+        <div class="summary">
+            <h2>Summary</h2>
+            <p>Score: {{ score }}%</p>
+            <p>Accuracy: <strong>{{ accuracy }}%</strong></p>
+            <p>Average time per question:  <strong>{{ avg_time }}s</strong></p>
+            {% if score == 100 %}
+                <p>Perfect score! Great work! 🎉</p>
+            {% elif score >= 50 %}
+                <p>Good effort! Keep practising! 💪</p>
+            {% else %}
+                <p>Keep trying, you'll get there! 📚</p>
+            {% endif %}
+        </div>
+        <hr>
+
+        <div class="results-breakdown">
+            {% if wrong_questions|length == 0 %}
+                <h2> You got Everything Right! 🎉</h2>
+
+            {% else %}
+                <h2>Questions you got Wrong ({{ wrong_questions|length }})</h2>
+                {% for q in wrong_questions %}
+                    <div class="wrong-question-card">
+                        <p><strong>Question:</strong> {{ q.question }}</p>
+                        <p><strong>Your answer:</strong> <span class="wrong-answer">{{ q.your_answer }}</span></p>
+                        <p><strong>Correct answer:</strong> <span class="correct-answer">{{ q.correct_answer }}</span></p>
+                        </div>
+                        {% endfor %}
+            {% endif %}
+        </div>
+    </main>
+    
+</body>
+</html>

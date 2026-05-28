@@ -6,7 +6,8 @@ import time
 from datetime import date
 from werkzeug.security import generate_password_hash, check_password_hash
 import json
-
+import csv
+import io
 
 app = Flask(__name__) # Creates an instance of the Flask objected called "__name__"
 app.secret_key = 'secret_key' # Sets the secret key for the Flask application, which is used for securely signing the session cookie
@@ -30,7 +31,7 @@ def login_validation():
         if user and check_password_hash(user[1], password): # Checks if a user was found and if the provided password matches the hashed password stored in the database
             session['user_id'] = user[0] # Stores the user's id in the session
             session['is_admin'] = user[2] # Stores the user's is_admin status in the session        
-            return redirect(url_for('teacher_home')) # Redirects the user to the dashboard page if the login is successful 
+            return redirect(url_for('home')) # Redirects the user to the dashboard page if the login is successful 
 
         return "Invalid Login"
     return render_template('login.html')
@@ -181,17 +182,36 @@ def add_quiz():
     connection.commit()
     connection.close()
 
-@app.route('/add_question_page')
+    return redirect(url_for('add_question_page'))
 def add_question_page():
     if not session.get('is_admin'):
         return redirect(url_for('login'))
-    
+
     connection = sqlite3.connect('database/Questions.db')
     cursor = connection.cursor()
     quizzes = cursor.execute('SELECT * FROM quizzes').fetchall()
+    # Join questions with quiz name; include question_type and marks if columns exist
+    try:
+        questions = cursor.execute('''
+            SELECT q.id, q.topic, q.level, q.question_text, q.correct_answer,
+                   q.option_a, q.option_b, q.option_c, q.option_d,
+                   q.quiz_id, qz.name, q.question_type, q.marks
+            FROM questions q
+            JOIN quizzes qz ON q.quiz_id = qz.id
+            ORDER BY qz.name, q.level, q.id
+        ''').fetchall()
+    except:
+        questions = cursor.execute('''
+            SELECT q.id, q.topic, q.level, q.question_text, q.correct_answer,
+                   q.option_a, q.option_b, q.option_c, q.option_d,
+                   q.quiz_id, qz.name, NULL, NULL
+            FROM questions q
+            JOIN quizzes qz ON q.quiz_id = qz.id
+            ORDER BY qz.name, q.level, q.id
+        ''').fetchall()
     connection.close()
 
-    return render_template('createQuiz.html', quizzes=quizzes)
+    return render_template('createQuiz.html', quizzes=quizzes, questions=questions)
 
 @app.route('/add_question', methods=['POST'])
 def add_question():
@@ -219,21 +239,145 @@ def add_question():
 
     return redirect(url_for('add_question_page'))
 
+# Time limits in seconds per mark for each level (0 = no limit)
+LEVEL_TIME_PER_MARK = {1: 0, 2: 180, 3: 144, 4: 108, 5: 90}
+
+@app.route('/select_level/<int:quiz_id>')
+def select_level(quiz_id):
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    connection = sqlite3.connect('database/Questions.db')
+    cursor = connection.cursor()
+    quiz = cursor.execute('SELECT * FROM quizzes WHERE id = ?', (quiz_id,)).fetchone()
+    connection.close()
+    return render_template('selectLevel.html', quiz=quiz)
+
+
 @app.route('/quiz/<int:quiz_id>')
 def quiz(quiz_id):
     if 'user_id' not in session:
         return redirect(url_for('login'))
-    
+    level = int(request.args.get('level', 1))
     connection = sqlite3.connect('database/Questions.db')
     cursor = connection.cursor()
-
-    #get the quiz
     quiz = cursor.execute('SELECT * FROM quizzes WHERE id = ?', (quiz_id,)).fetchone()
+    questions = cursor.execute("""
+        SELECT id, question_text, option_a, option_b, option_c, option_d, marks
+        FROM questions WHERE quiz_id = ? AND level <= ?
+        ORDER BY level ASC
+    """, (quiz_id, level)).fetchall()
+    connection.close()
+    time_per_mark = LEVEL_TIME_PER_MARK.get(level, 0)
+    return render_template('quiz.html', questions=questions, quiz=quiz,
+                           level=level, time_per_mark=time_per_mark)
 
-    questions = cursor.execute("""SELECT id, question_text, option_a, option_b, option_c, option_d FROM questions WHERE quiz_id = ?""", (quiz_id,)).fetchall()
-    connection.close()\
-    
-    return render_template('quiz.html', questions=questions, quiz=quiz)
+
+@app.route('/upload_questions', methods=['POST'])
+def upload_questions():
+    if not session.get('is_admin'):
+        return redirect(url_for('login'))
+    file = request.files.get('csv_file')
+    if not file or not file.filename.endswith('.csv'):
+        return redirect(url_for('add_question_page'))
+    stream = io.StringIO(file.stream.read().decode('utf-8'), newline=None)
+    reader = csv.DictReader(stream)
+    connection = sqlite3.connect('database/Questions.db')
+    cursor = connection.cursor()
+    # Add new columns if they don't exist yet
+    try:
+        cursor.execute("ALTER TABLE questions ADD COLUMN question_type TEXT DEFAULT 'mc'")
+        cursor.execute("ALTER TABLE questions ADD COLUMN marks INTEGER DEFAULT 1")
+        connection.commit()
+    except:
+        pass
+    imported = 0
+    errors = []
+    required = ['quiz_id', 'topic', 'level', 'question_type', 'question_text', 'marks']
+    for i, row in enumerate(reader, start=2):
+        missing = [f for f in required if not row.get(f, '').strip()]
+        if missing:
+            errors.append(f"Row {i}: missing fields: {', '.join(missing)}")
+            continue
+        q_type = row['question_type'].strip().lower()
+        if q_type not in ('mc', 'short', 'long'):
+            errors.append(f"Row {i}: question_type must be mc, short, or long")
+            continue
+        try:
+            level = int(row['level'].strip())
+            marks = int(row['marks'].strip())
+            quiz_id = int(row['quiz_id'].strip())
+            if not 1 <= level <= 5:
+                raise ValueError
+        except ValueError:
+            errors.append(f"Row {i}: level must be 1-5, marks and quiz_id must be integers")
+            continue
+        if q_type == 'mc':
+            correct = row.get('correct_answer', '').strip().upper()
+            if correct not in ('A', 'B', 'C', 'D'):
+                errors.append(f"Row {i}: MC question must have correct_answer A, B, C, or D")
+                continue
+            option_a = row.get('option_a', '').strip()
+            option_b = row.get('option_b', '').strip()
+            option_c = row.get('option_c', '').strip()
+            option_d = row.get('option_d', '').strip()
+        else:
+            correct = ''
+            option_a = option_b = option_c = option_d = ''
+        cursor.execute("""
+            INSERT INTO questions (quiz_id, topic, level, question_text,
+                option_a, option_b, option_c, option_d, correct_answer, question_type, marks)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (quiz_id, row['topic'].strip(), level, row['question_text'].strip(),
+              option_a, option_b, option_c, option_d, correct, q_type, marks))
+        imported += 1
+    connection.commit()
+    connection.close()
+    return render_template('uploadReport.html', imported=imported, errors=errors)
+
+
+@app.route('/edit_question/<int:question_id>', methods=['GET', 'POST'])
+def edit_question(question_id):
+    if not session.get('is_admin'):
+        return redirect(url_for('login'))
+    connection = sqlite3.connect('database/Questions.db')
+    cursor = connection.cursor()
+    if request.method == 'POST':
+        cursor.execute("""
+            UPDATE questions SET topic=?, level=?, question_text=?,
+            option_a=?, option_b=?, option_c=?, option_d=?, correct_answer=?, marks=?
+            WHERE id=?
+        """, (
+            request.form.get('topic'),
+            int(request.form.get('level')),
+            request.form.get('question_text'),
+            request.form.get('option_a', ''),
+            request.form.get('option_b', ''),
+            request.form.get('option_c', ''),
+            request.form.get('option_d', ''),
+            request.form.get('correct_answer', ''),
+            int(request.form.get('marks', 1)),
+            question_id
+        ))
+        connection.commit()
+        connection.close()
+        return redirect(url_for('add_question_page'))
+    question = cursor.execute('SELECT * FROM questions WHERE id = ?', (question_id,)).fetchone()
+    quizzes = cursor.execute('SELECT * FROM quizzes').fetchall()
+    connection.close()
+    return render_template('editQuestion.html', question=question, quizzes=quizzes)
+
+
+@app.route('/delete_question/<int:question_id>', methods=['POST'])
+def delete_question(question_id):
+    if not session.get('is_admin'):
+        return redirect(url_for('login'))
+    connection = sqlite3.connect('database/Questions.db')
+    cursor = connection.cursor()
+    cursor.execute('DELETE FROM questions WHERE id = ?', (question_id,))
+    connection.commit()
+    connection.close()
+    return redirect(url_for('add_question_page'))
+
 
 @app.route('/submit_quiz', methods=['POST'])
 def submit_quiz():
@@ -296,6 +440,20 @@ def submit_quiz():
 
     return json.dumps({'result_id': result_id})
 
+@app.route('/results/<int:result_id>')
+def results(result_id):
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    connection = sqlite3.connect('database/LoginData.db')
+    cursor = connection.cursor()
+
+    result = cursor.execute('SELECT score, accuracy, avg_time, wrong_questions, date FROM results WHERE id = ? AND user_id = ?', (result_id, session['user_id'])).fetchone()
+    connection.close()
+
+    wrong_questions = json.loads(result[3])
+
+    return render_template('results.html', score=result[0], accuracy=result[1], avg_time=result[2], wrong_questions=wrong_questions, date=result[3])
 
 
 

@@ -3,1127 +3,256 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ quiz[1]}}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='main.css') }}">
+    <title>{{ quiz[1] }} — Level {{ level }}</title>
+    <style>
+        .quiz-header { margin-bottom: 1.5rem; }
+        .quiz-meta { color: #666; font-size: 0.9rem; margin-bottom: 0.3rem; }
+        .progress-bar-wrap { background: #e9ecef; border-radius: 8px; height: 8px; margin: 1rem 0; }
+        .progress-bar-fill { height: 8px; border-radius: 8px; background: #2c7be5;
+            transition: width 0.3s ease; }
+
+        .question-card { display: none; }
+        .question-card.active { display: block; }
+
+        .question-number { font-size: 0.85rem; color: #888; font-weight: 600;
+            text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem; }
+        .question-text { font-size: 1.1rem; font-weight: 500; margin-bottom: 1.5rem;
+            line-height: 1.6; }
+
+        .options { display: flex; flex-direction: column; gap: 0.7rem; margin-bottom: 1.5rem; }
+        .option-label {
+            display: flex; align-items: center; gap: 0.8rem;
+            padding: 0.75rem 1rem; border: 2px solid #e0e0e0; border-radius: 8px;
+            cursor: pointer; transition: border-color 0.15s, background 0.15s;
+        }
+        .option-label:hover { border-color: #2c7be5; background: #f0f5ff; }
+        .option-label input { display: none; }
+        .option-label.selected { border-color: #2c7be5; background: #f0f5ff; }
+        .option-letter {
+            width: 28px; height: 28px; border-radius: 50%;
+            background: #e9ecef; display: flex; align-items: center; justify-content: center;
+            font-weight: 700; font-size: 0.85rem; flex-shrink: 0;
+        }
+        .option-label.selected .option-letter { background: #2c7be5; color: white; }
+
+        .timer-wrap { display: flex; align-items: center; gap: 0.8rem; margin-bottom: 1rem; }
+        .timer-label { font-size: 0.85rem; color: #666; }
+        .timer-display {
+            font-size: 1.4rem; font-weight: 800; min-width: 60px;
+            font-variant-numeric: tabular-nums;
+        }
+        .timer-display.warning { color: #e67e22; }
+        .timer-display.danger { color: #e74c3c; }
+        .timer-bar-wrap { flex: 1; background: #e9ecef; border-radius: 4px; height: 6px; }
+        .timer-bar { height: 6px; border-radius: 4px; background: #28a745;
+            transition: width 1s linear, background 0.3s; }
+        .timer-bar.warning { background: #e67e22; }
+        .timer-bar.danger { background: #e74c3c; }
+
+        .nav-buttons { display: flex; gap: 1rem; margin-top: 1rem; }
+        .btn { padding: 0.6rem 1.4rem; border-radius: 7px; border: none;
+            font-size: 0.95rem; font-weight: 600; cursor: pointer; }
+        .btn-primary { background: #2c7be5; color: white; }
+        .btn-primary:hover { background: #1a6bd4; }
+        .btn-secondary { background: #e9ecef; color: #333; }
+        .btn-secondary:hover { background: #d4d9e0; }
+    </style>
 </head>
 <body>
-    <main>
-        <h1>{{ quiz[1] }}</h1>
-
-        <p>Question <span id="current-question">1</span> of {{ questions|length }}</p>
-        <p>Time: <span id="timer">0</span>s</p>
-
-        <div id="quiz-container">
-            {% for question in questions %}
-            <div class="question-card" id="question-{{loop.index}}" style="display:none;">
-                <h3>Question {{ loop.index }} of {{ questions|length }}</h3>
-                <p>{{ question[1] }}</p>
-                <button class="option-btn" onclick="selectAnswer({{ question[0] }}, '{{ question[2]}}')">{{ question[2] }}</button>
-                <button class="option-btn" onclick="selectAnswer({{ question[0] }}, '{{ question[3]}}')">{{ question[3] }}</button> 
-                <button class="option-btn" onclick="selectAnswer({{ question[0] }}, '{{ question[4]}}')">{{ question[4] }}</button> 
-                <button class="option-btn" onclick="selectAnswer({{ question[0] }}, '{{ question[5]}}')">{{ question[5] }}</button> 
-            </div>"
-            {% endfor %}
+    <div class="banner">
+        <div class="banner-content">
+            <a href="{{ url_for('logout') }}">Log Out</a>
+            <a href="{{ url_for('home') }}">Back to Dashboard</a>
         </div>
-    </main>
-
-    <script>
-        let currentQuestion = 1;
-        const totalQuestions = {{ questions|length }};
-        let questionStartTime = Date.now();
-        let answers = {};
-        let tiemerInterval;
-
-        function showQuestion(n) {
-            document.getElementById('question-' + n).style.display = 'block';
-            document.getElementById('current-question').textContent = n;
-            questionStartTime = Date.now();
-            startTimer();
-        }
-// Timer that counts up each second
-        function startTimer() {
-            clearInterval(timerInterval);
-            document.getElementById('timer').textContent = '0';
-            timerInterval = setInterval(() => {
-                let elapsed = Math.floor((Date.now() - questionStartTime) / 1000);
-                document.getElementById('timer').textContent = elapsed;
-            }, 1000);
-        }
-
-        // Called when user clicks an answer button
-Claude finished the responseYou said: If I give you my code, could you please double check that there isn't anything wrong.If I give you my code, could you please double check that there isn't anything wrong. I Keep getting the Invalid user page even when everything I enter is correct?30 AprClaude responded: Of course!Of course! Please share your code and I'll take a look.from flask import Flask, render_template, request, redirect, url_for, session
-from waitress import serve
-import sqlite3
-import os
-import time
-from werkzeug.security import generate_password_hash, check_password_hash
-
-
-app = Flask(__name__) # Creates an instance of the Flask objected called "pasted30 AprClaude responded: I can spot several bugs.I can spot several bugs. The main one causing your "Invalid Login" issue is a broken secret_key, plus there are other significant bugs too. Let me walk through them:
-
-🔴 Bug 1: Session breaks on every restart (your main login issue)
-python# ❌ Current — generates a new random key every restart, invalidating all sessions
-app.secret_key = os.urandom(24)
-
-# ✅ Fix — use a fixed secret key
-app.secret_key = 'your-fixed-secret-key-here'
-Every time the server restarts, the secret key changes, meaning any existing session cookies become invalid immediately.
-
-🔴 Bug 2: Indentation error in add_user() — code runs outside the if block
-python# ❌ Current — the DB connection is outside the if POST block
-def add_user():
-    if request.method == 'POST':
-        ...
-        hashed_password = generate_password_hash(password)
-
-    connection = sqlite3.connect(...)  # ← runs even on GET requests, crashes because fname/email etc. are undefined
-Everything from connection = sqlite3.connect(...) onwards needs to be indented inside the if request.method == 'POST': block.
-
-🔴 Bug 3: Wrong duplicate-check logic in add_user()
-python# ❌ Current — checks for matching email AND hashed password (will never match), 
-# then inserts even if user exists
-ans = cursor.execute('SELECT * FROM users WHERE email=? AND password=?', (email, hashed_password)).fetchall()
-if len(ans) > 0:
-    connection.close()
-    return render_template('login.html')  # Should be blocking duplicates, but logic is inverted
-else:
-    cursor.execute('INSERT INTO users ...')
-
-# ✅ Fix — check email only, and block insert if already exists
-ans = cursor.execute('SELECT * FROM users WHERE email=?', (email,)).fetchall()
-if len(ans) > 0:
-    connection.close()
-    return "An account with this email already exists."
-else:
-    cursor.execute('INSERT INTO users (fname, lname, email, password) VALUES (?, ?, ?, ?)', (fname, lname, email, hashed_password))
-    connection.commit()
-    connection.close()
-    return render_template('login.html')
-
-🔴 Bug 4: Wrong database path in make_admin()
-python# ❌ Current
-connection = sqlite3.connect("LoginData.db")
-
-# ✅ Fix
-connection = sqlite3.connect("database/LoginData.db")
-
-🟡 Bug 5: Column name mismatch in admin() and admin_users()
-python# ❌ Current — queries first_name / last_name
-users_cursor.execute("SELECT first_name, last_name, email, is_admin FROM users")
-
-# ✅ Fix — should match your actual column names used elsewhere
-users_cursor.execute("SELECT fname, lname, email, is_admin FROM users")
-You use fname/lname everywhere else, so these queries will likely throw a column error.
-
-🟡 Minor: dashboard route is named home
-Your login_validation redirects to url_for('dashboard') but no route function is named dashboard — the function is called home. Either rename the function or fix the redirect:
-python# ❌ Current
-return redirect(url_for('dashboard'))
-
-# ✅ Fix
-return redirect(url_for('home'))
-
-Here's a corrected version of the most critical section:
-pythonapp.secret_key = 'replace-with-a-long-random-fixed-string'
-
-@app.route('/add_user', methods=['GET', 'POST'])
-def add_user():
-    if request.method == 'POST':
-        fname = request.form.get('fname')
-        lname = request.form.get('lname')
-        email = request.form.get('email')
-        password = request.form.get('password')
-
-        if not email.endswith('@education.nsw.gov.au'):
-            return "You must use a DOE email address to register."
-
-        hashed_password = generate_password_hash(password)
-
-        connection = sqlite3.connect('database/LoginData.db')
-        cursor = connection.cursor()
-
-        ans = cursor.execute('SELECT * FROM users WHERE email=?', (email,)).fetchall()
-        if len(ans) > 0:
-            connection.close()
-            return "An account with this email already exists."
-        else:
-            cursor.execute('INSERT INTO users (fname, lname, email, password) VALUES (?, ?, ?, ?)',
-                           (fname, lname, email, hashed_password))
-            connection.commit()
-            connection.close()
-            return render_template('login.html')
-    return render_template('register.html')
-Fix Bug 1 (secret key) first — that's almost certainly what's causing your login to fail.You said: Thanks for your help.from flask import Flask, render_template, request, redirect, url_for, session
-from waitress import serve
-import sqlite3
-import os
-import time
-from werkzeug.security import generate_password_hash, check_password_hash
-
-
-app = Flask(__name__) # Creates an instance of the Flask objected called "pastedThanks for your help. This is the new code but I'm still having so many issues and still recieving the Invalid user output30 Apr2 / 2Claude responded: Good progress on the fixes!Good progress on the fixes! I can see a few remaining bugs. Let me go through them:
-
-🔴 Bug 1: add_user() indentation is still broken
-The database code is still outside the if request.method == 'POST': block. This means on a GET request it crashes, and fname, email, hashed_password etc. are all undefined at that point.
-python# ❌ Current
-def add_user():
-    if request.method == 'POST':
-        ...
-        hashed_password = generate_password_hash(password)
-
-    connection = sqlite3.connect(...)  # ← still outside the if block!
-
-# ✅ Fix — indent everything inside the if block
-def add_user():
-    if request.method == 'POST':
-        ...
-        hashed_password = generate_password_hash(password)
-
-        connection = sqlite3.connect('database/LoginData.db')
-        cursor = connection.cursor()
-
-        ans = cursor.execute('SELECT * FROM users WHERE email=?', (email,)).fetchall()
-        if len(ans) > 0:
-            connection.close()
-            return "An account with this email already exists."
-        else:
-            cursor.execute('INSERT INTO users (first_name, last_name, email, password) VALUES (?, ?, ?, ?)',
-                           (fname, lname, email, hashed_password))
-            connection.commit()
-            connection.close()
-            return render_template('login.html')
-    return render_template('register.html')
-
-🔴 Bug 2: url_for('dashboard') won't work — function is named home
-Your login redirect will throw an error because url_for uses the function name, not the route path.
-python# ❌ Current
-return redirect(url_for('dashboard'))  # no function called 'dashboard' exists
-
-# ✅ Fix
-return redirect(url_for('home'))  # matches 'def home():'
-
-🔴 Bug 3: make_admin sets is_admin = False instead of True
-python# ❌ Current — this removes admin, not grants it
-cursor.execute("UPDATE users SET is_admin = False WHERE email = ?", (email,))
-
-# ✅ Fix
-cursor.execute("UPDATE users SET is_admin = 1 WHERE email = ?", (email,))
-
-🟡 Bug 4: dashboard route doesn't load user data from the session
-Your dashboard route tries to get user info from URL query parameters, but login_validation just redirects without passing any. You should look up the user from the session instead:
-python# ❌ Current — these will always be None
-@app.route('/dashboard')
-def home():
-    fname = request.args.get('first_name')
-    lname = request.args.get('last_name')
-    email = request.args.get('email')
-
-# ✅ Fix — load from session/database
-@app.route('/dashboard')
-def home():
-    if 'user_id' not in session:
-        return redirect(url_for('login'))
-
-    connection = sqlite3.connect('database/LoginData.db')
-    cursor = connection.cursor()
-    cursor.execute('SELECT first_name, last_name, email FROM users WHERE id=?', (session['user_id'],))
-    user = cursor.fetchone()
-    connection.close()
-
-    return render_template('dashboard.html', first_name=user[0], last_name=user[1], email=user[2])
-
-Here's the full corrected file with all fixes applied:
-pythonfrom flask import Flask, render_template, request, redirect, url_for, session
-import sqlite3
-from werkzeug.security import generate_password_hash, check_password_hash
-
-app = Flask(__name__)
-app.secret_key = 'secret_key'
-
-@app.route('/')
-def login():
-    return render_template('login.html')
-
-@app.route('/login_validation', methods=['POST'])
-def login_validation():
-    if request.method == 'POST':
-        email = request.form.get('email')
-        password = request.form.get('password')
-
-        connection = sqlite3.connect('database/LoginData.db')
-        cursor = connection.cursor()
-        cursor.execute('SELECT id, password, is_admin FROM users WHERE email=?', (email,))
-        user = cursor.fetchone()
-        connection.close()
-
-        if user and check_password_hash(user[1], password):
-            session['user_id'] = user[0]
-            session['is_admin'] = user[2]
-            return redirect(url_for('home'))  # ✅ fixed function name
-
-        return "Invalid Login"
-    return render_template('login.html')
-
-@app.route('/dashboard')
-def home():
-    if 'user_id' not in session:
-        return redirect(url_for('login'))
-
-    connection = sqlite3.connect('database/LoginData.db')
-    cursor = connection.cursor()
-    cursor.execute('SELECT first_name, last_name, email FROM users WHERE id=?', (session['user_id'],))
-    user = cursor.fetchone()
-    connection.close()
-
-    return render_template('dashboard.html', first_name=user[0], last_name=user[1], email=user[2])
-
-@app.route('/register')
-def register():
-    return render_template('register.html')
-
-@app.route('/add_user', methods=['GET', 'POST'])
-def add_user():
-    if request.method == 'POST':  # ✅ everything is now inside this block
-        fname = request.form.get('first_name')
-        lname = request.form.get('last_name')
-        email = request.form.get('email')
-        password = request.form.get('password')
-
-        if not email.endswith('@education.nsw.gov.au'):
-            return "You must use a DOE email address to register."
-
-        hashed_password = generate_password_hash(password)
-
-        connection = sqlite3.connect('database/LoginData.db')
-        cursor = connection.cursor()
-
-        ans = cursor.execute('SELECT * FROM users WHERE email=?', (email,)).fetchall()
-        if len(ans) > 0:
-            connection.close()
-            return "An account with this email already exists."
-        else:
-            cursor.execute('INSERT INTO users (first_name, last_name, email, password) VALUES (?, ?, ?, ?)',
-                           (fname, lname, email, hashed_password))
-            connection.commit()
-            connection.close()
-            return render_template('login.html')
-    return render_template('register.html')
-
-@app.route('/firstquiz')
-def quiz():
-    return render_template('quizPage.html')
-
-@app.route("/admin")
-def admin():
-    if not session.get("is_admin"):
-        return redirect(url_for("login"))
-
-    data_conn = sqlite3.connect("database/CollectedData.db")
-    data_cursor = data_conn.cursor()
-    data_cursor.execute("SELECT * FROM DATA")
-    data_rows = data_cursor.fetchall()
-    data_columns = [description[0] for description in data_cursor.description]
-    data_conn.close()
-
-    users_conn = sqlite3.connect("database/LoginData.db")
-    users_cursor = users_conn.cursor()
-    users_cursor.execute("SELECT first_name, last_name, email, is_admin FROM users")
-    users = users_cursor.fetchall()
-    users_conn.close()
-
-    return render_template("teacherHome.html", data_rows=data_rows, data_columns=data_columns, users=users)
-
-@app.route('/logout')
-def logout():
-    session.clear()
-    return redirect(url_for("login"))
-
-@app.route("/make_admin/<email>")
-def make_admin(email):
-    if not session.get("is_admin"):
-        return redirect(url_for("login"))
-
-    connection = sqlite3.connect("database/LoginData.db")
-    cursor = connection.cursor()
-    cursor.execute("UPDATE users SET is_admin = 1 WHERE email = ?", (email,))  # ✅ fixed True→1
-    connection.commit()
-    connection.close()
-
-    return redirect(url_for("admin"))
-
-@app.route("/admin/users")
-def admin_users():
-    if not session.get("is_admin"):
-        return redirect(url_for('login'))
-
-    connection = sqlite3.connect("database/LoginData.db")
-    cursor = connection.cursor()
-    users = cursor.execute("SELECT first_name, last_name, email, is_admin FROM users").fetchall()
-    connection.close()
-
-    return render_template("teacherHome.html", users=users)
-
-@app.route('/usermanagement')
-def user_management():
-    return render_template('studentManagement.html')
-
-if __name__ == '__main__':
-    app.run(debug=True)
-The indentation bug in add_user and the url_for('dashboard') mismatch are the most likely causes of your continued login issues. Try this and let me know how it goes!You said: It's still not working, do you need to have a look at some of my other pages?It's still not working, do you need to have a look at some of my other pages?30 AprClaude responded: Yes, please share them!Yes, please share them! To debug the login issue effectively, the most useful files would be:
-
-login.html — to check the form field names and the action URL match what the Python expects
-register.html — to check the same for registration
-Your database schema — so we can confirm the column names in the users table match what the code queries
-
-Any other files you think might be relevant are welcome too!You said: This Is login<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
-    <title>Login</title>
-</head>
-<body>
-  <main>
-    <form method ="post" action="/login_validation">
-        <input type = "email" name = "email" placeholder = "DOE Email"><br>
-        <input type = "password" name = "password" placeholder = "Password"><br>
-        <button type = "submit" value = "login">Login</button>
-    </form>
-    <p>Don't have an account? <br> <a href = "/register">Register</a></p>
-  </main>  
-</body>
-</html>This Is loginShow more30 AprClaude responded: The login page looks fine actually — the form field names (email, password) and the action (/login_validation) all match correctly.The login page looks fine actually — the form field names (email, password) and the action (/login_validation) all match correctly.
-This means the issue is almost certainly in the database itself. Can you share:
-
-The schema of your users table — you can get this by running this in your terminal:
-
-bash    sqlite3 database/LoginData.db "PRAGMA table_info(users);"
-This will show all column names and types, so we can check if the code is querying the right columns.
-2. register.html — so we can confirm that when users sign up, the data is actually being saved correctly in the first place. If registration is broken, no login will ever work.
-The most likely culprit at this point is either:
-
-The password isn't being hashed and stored correctly at registration, so check_password_hash always fails
-A column name mismatch between what the code queries and what actually exists in the database
-import sqlite3
-
-connection = sqlite3.Connection('LoginData.db') #Creates a python connection to a database called 'LoginData.db'
-cursor = connection.cursor() #Creates a cursor object that python can point to, to reference the database
-
-cmd1 = '''CREATE TABLE IF NOT EXISTS users (id INTEGER primary key AUTOINCREMENT,
-                                            first_name VARCHAR(50) NOT NULL, 
-                                            last_name VARCHAR(50) NOT NULL, 
-                                            email VARCHAR(50) UNIQUE NOT NULL, 
-                                            password VARCHAR(50) NOT NULL,
-                                            level INTEGER DEFAULT 1,
-                                            is_admin BOOLEAN DEFAULT FALSE)''' # Creates a string called cmd1 whihc specifies SQL instructions to create a table with 4 fields each of type variable characters with a max length of 50
-cursor.execute(cmd1) # executes the string variable cmd1 against the database
-
-cmd2 = """INSERT INTO USERS (id, first_name, last_name, email, password, level, is_admin) VALUES (1, 'tester', 'test', 'tester@education.nsw.gov.au', 'testerP', 1, FALSE)""" # is a string that specifies adding a record to the database
-cursor.execute(cmd2)
-connection.commit() # updates the database with this new record
-
-ans = cursor.execute("SELECT * FROM users").fetchall()
-
-
-for i in ans:
-    print(i)Show more30 AprClaude responded: Found it!Found it! The test user's password is stored as plain text ('testerP'), but your login code uses check_password_hash() which expects a hashed password. They will never match.
-Fix your database creation script like this:
-pythonimport sqlite3
-from werkzeug.security import generate_password_hash  # ✅ add this
-
-connection = sqlite3.connect('database/LoginData.db')  # ✅ also fix path to match your app
-cursor = connection.cursor()
-
-cmd1 = '''CREATE TABLE IF NOT EXISTS users (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    first_name VARCHAR(50) NOT NULL, 
-    last_name VARCHAR(50) NOT NULL, 
-    email VARCHAR(50) UNIQUE NOT NULL, 
-    password VARCHAR(50) NOT NULL,
-    level INTEGER DEFAULT 1,
-    is_admin BOOLEAN DEFAULT FALSE
-)'''
-cursor.execute(cmd1)
-
-hashed_password = generate_password_hash('testerP')  # ✅ hash the password first
-
-cmd2 = """INSERT INTO users (first_name, last_name, email, password, level, is_admin) 
-          VALUES (?, ?, ?, ?, ?, ?)"""  # ✅ use parameterised query for safety
-cursor.execute(cmd2, ('tester', 'test', 'tester@education.nsw.gov.au', hashed_password, 1, False))
-
-connection.commit()
-
-ans = cursor.execute("SELECT * FROM users").fetchall()
-for i in ans:
-    print(i)
-Then:
-
-Delete your old LoginData.db file entirely
-Re-run this script to recreate it with the correctly hashed password
-Try logging in again with tester@education.nsw.gov.au / testerP
-
-That should finally fix it! Also note the path is database/LoginData.db — make sure this script is saving the database in the same database/ folder that your Flask app is looking in, otherwise you'll have the same problem again.You said: That worked thank you so muchThat worked thank you so much30 AprClaude responded: Glad it's working!Glad it's working! 🎉
-To summarise what the root cause was — your test user's password was stored as plain text in the database, but your login code was using check_password_hash() which only works with properly hashed passwords. They could never match no matter what you typed.
-A couple of tips going forward:
-
-Always use generate_password_hash() when inserting any user into the database, whether via script or registration form
-If login ever breaks again after changing something, the database is a good first place to check — you can quickly inspect it with sqlite3 database/LoginData.db "SELECT * FROM users;" in your terminal
-
-Good luck with the rest of your project!You said: These are the requirements and specifications for my task, do you reckon you could guide me through making my first quiz step by step?These are the requirements and specifications for my task, do you reckon you could guide me through making my first quiz step by step?RequirementsA login associated with a DOE emailRead a data file containing the multiple choice questionsEdit a data file so that more multiple choice questions can be addedCalculate average time per question and percentage (%) of accuracyStore the user accounts stats and progress.Administrator access that can add questionsEach quiz must have at least 5 questions
-SpecificationsA login associated with a department of education email.Read a data file containing the multiple choice questionsEdit a data file so that more multiple choice questions can be addedCalculate average time per question and percentage (%) of accuracy FOR each different topic AND overall.Store the user accounts stats and progress.Contain a leveling system, from absolute beginner at Level 1 with unlimited time to time limited questions Level 5.Give the administrator of the chemistry tutor the option of entering additional questions for each of the given chemistry topics into a form, which then gets written into at least one file, including necessary figures.Each quiz must have at least 5 multiple choice questions with space to include long and short answer questions
-ExtrasInclude written response questions that use a ChatGPT API to submit the user's response as well as the correct response with a request to give feedback.Able to be downloaded onto a phone to be run offline with student performance uploaded when connection becomes availableSecure software architecture protectionsShow more30 AprClaude responded: Great, the login system is already done!Great, the login system is already done! Let's focus on the quiz next since it's the core feature. Here's a step-by-step plan we'll work through together:
-
-The Plan
-Step 1 — Question database — Create a questionBank.db with a questions table storing the question, 4 options, correct answer, topic, and difficulty/level.
-Step 2 — Quiz page — Build quizPage.html that loads questions from the database, displays them one at a time, and tracks time per question.
-Step 3 — Results & stats — Calculate accuracy % and average time per question, then store them in the database against the user.
-Step 4 — Admin question entry — Build a form in the teacher dashboard to add new questions to the database.
-Step 5 — Leveling system — Tie question difficulty and time limits to the user's current level.
-
-Let's start with Step 1. Before we build anything, a few quick questions:
-Do you already have any questions ready, or do we just create the table structure with a few test questions for now?
-Also, what chemistry topics will the quiz cover? For example:
-
-Atomic structure
-Periodic table
-Chemical bonding
-etc.
-
-That will help me set up the database correctly from the start so you don't have to redo it later.You said: I've got some questions already prepared to useI've got some questions already prepared to use30 AprClaude responded: Perfect!Perfect! Go ahead and share them and we'll use them to:
-
-Design the database table structure around your exact data
-Write the script to populate the database with your questions
-
-Paste them in whatever format you have them — whether that's a spreadsheet, a list, a Word doc, anything works!You said: i kind of want to write it myself, I was wondering if you could teach me the right steps to achieving all the specifications and requirements relating to a sin…i kind of want to write it myself, I was wondering if you could teach me the right steps to achieving all the specifications and requirements relating to a singular quiz30 AprClaude responded: Of course!Of course! That's a great way to actually learn it. Let me break it down into clear steps:
-
-Step 1 — Create the Question Bank Database
-Write a Python script (like your LoginData.py) that creates a questionBank.db with a table like this:
-sqlCREATE TABLE IF NOT EXISTS questions (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    topic TEXT NOT NULL,
-    level INTEGER NOT NULL,
-    question TEXT NOT NULL,
-    option_a TEXT NOT NULL,
-    option_b TEXT NOT NULL,
-    option_c TEXT NOT NULL,
-    option_d TEXT NOT NULL,
-    correct_answer TEXT NOT NULL  -- stores 'A', 'B', 'C' or 'D'
-)
-Then write INSERT statements to add your prepared questions in, just like you did with the test user.
-
-Step 2 — Flask Route to Load the Quiz
-In your app.py, write a route that:
-
-Connects to questionBank.db
-Fetches questions filtered by topic and the user's current level using session['user_id']
-Passes them to quizPage.html
-
-
-Step 3 — Build quizPage.html
-This page needs to:
-
-Display one question at a time
-Show 4 answer buttons (A, B, C, D)
-Use JavaScript to track time spent on each question
-Move to the next question on answer
-
-
-Step 4 — Submit & Calculate Results
-When the quiz ends, send the answers and times to a Flask route that:
-
-Compares answers against correct ones to get accuracy %
-Calculates average time per question
-Saves both to a results table in your database against the user's id
-
-
-Step 5 — Store Results in the Database
-Create a second table in questionBank.db:
-sqlCREATE TABLE IF NOT EXISTS results (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER NOT NULL,
-    topic TEXT NOT NULL,
-    score REAL NOT NULL,        -- accuracy percentage
-    avg_time REAL NOT NULL,     -- average seconds per question
-    date TEXT NOT NULL
-)
-
-Suggested Order to Write It
-
-createQuestionBank.py — create and populate the database ← start here
-Flask route in app.py to serve the quiz
-quizPage.html with JavaScript timer
-Flask route to receive and process answers
-Results stored and displayed
-
-
-Start with Step 1 — write your createQuestionBank.py and share it here when you're done and I'll check it over before we move to Step 2. Does that sound good?You said: can you help me write the code that is in step 2 onwardcan you help me write the code that is in step 2 onward30 AprClaude responded: Sure!Sure! Let's go one step at a time. Have you finished Step 1 — your createQuestionBank.py with your questions inserted? If you share that first I can make sure the table structure is correct before we build the Flask route on top of it, otherwise we might have to redo things later.You said: This is what I have, Iimport sqlite3 
-connection = sqlite3.Connection('database/Questions.db') #Creates a python connection to a database called 'LoginData.db'
-cursor = connection.cursor() #Creates a cursor object that python can point to, to reference the database
-
-cmd3 = '''CREATE TABLE IF NOT EXISTS questions (id INTEGER primary key AUTOINCREMENT,
-                                                question_text TEXT NOT NULL,
-                                                correct_answer TEXT NOT NULL,
-                                                option_a TEXT NOT NULL,
-                                                option_b TEXT NOT NULL,
-                                                option_c TEXT NOT NULL,
-                                                option_d TEXT NOT NULL)'''
-cursor.execute(cmd3)
-
-cmd4 = """INSERT INTO questions (question_text, correct_answer, option_a, option_b, option_c, option_d) 
-          VALUES (?, ?, ?, ?, ?, ?)"""  # ✅ use parameterised query for safety
-cursor.execute(cmd4, ('What is the capital of France?', 'Paris', 'London', 'Berlin', 'Rome', 'Madrid'))
-connection.commit() # updates the database with this new record
-
-ans = cursor.execute("SELECT * FROM questions").fetchall()
-
-
-for i in ans:
-    print(i)This is what I have, IShow more30 AprClaude responded: Good start!Good start! Before we move to Step 2, I'd suggest adding two columns to your table — topic and level. These are required by your specifications:
-
-topic — lets you filter questions by chemistry topic
-level — ties into the leveling system (1 = no time limit, 5 = time limited)
-
-Without these, you'll have to redo the database later. Here's the updated script:
-pythonimport sqlite3 
-
-connection = sqlite3.connect('database/Questions.db')
-cursor = connection.cursor()
-
-cmd3 = '''CREATE TABLE IF NOT EXISTS questions (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    topic TEXT NOT NULL,
-    level INTEGER NOT NULL,
-    question_text TEXT NOT NULL,
-    option_a TEXT NOT NULL,
-    option_b TEXT NOT NULL,
-    option_c TEXT NOT NULL,
-    option_d TEXT NOT NULL,
-    correct_answer TEXT NOT NULL
-)'''
-cursor.execute(cmd3)
-
-cmd4 = """INSERT INTO questions (topic, level, question_text, option_a, option_b, option_c, option_d, correct_answer) 
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?)"""
-
-cursor.execute(cmd4, ('General', 1, 'What is the capital of France?', 'London', 'Berlin', 'Rome', 'Paris', 'Paris'))
-
-connection.commit()
-
-ans = cursor.execute("SELECT * FROM questions").fetchall()
-for i in ans:
-    print(i)
-Once you've added all your chemistry questions into this script, share it and we'll move to Step 2. Make sure each question has the right topic and level filled in!You said: Alrighty, Done!Alrighty, Done! :)30 AprClaude responded: Great!Great! Now let's build Step 2 — the Flask route to load the quiz.
-Add this to your app.py:
-python@app.route('/quiz/<topic>')
-def quiz(topic):
-    if 'user_id' not in session:
-        return redirect(url_for('login'))
-    
-    user_level = session.get('level', 1)  # defaults to level 1 if not set
-
-    connection = sqlite3.connect('database/Questions.db')
-    cursor = connection.cursor()
-    
-    cursor.execute('''SELECT id, question_text, option_a, option_b, option_c, option_d 
-                      FROM questions 
-                      WHERE topic=? AND level<=?
-                      ORDER BY RANDOM()
-                      LIMIT 5''', (topic, user_level))
-    
-    questions = cursor.fetchall()
-    connection.close()
-
-    return render_template('quizPage.html', questions=questions, topic=topic)
-A few things to note:
-
-The route takes a topic in the URL, e.g. /quiz/Atomic Structure
-It filters questions by the user's level so they only see appropriate questions
-ORDER BY RANDOM() shuffles the questions each time
-LIMIT 5 ensures at least 5 questions as per your requirements
-
-
-Now for Step 3, we need to build quizPage.html. This is the most complex part because it needs JavaScript to:
-
-Show one question at a time
-Track time per question
-Collect answers
-Submit everything at the end
-
-Are you happy with the route above? If so, go ahead and open your quizPage.html and share what you currently have in it and we'll build it out together!<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Quiz</title>
-</head>
-<body>
-    
-</body>
-</html>Show more30 AprClaude responded: Perfect, blank canvas!Perfect, blank canvas! Let's build it step by step so you understand each part.
-First, let's just get the questions displaying. Add this to your quizPage.html:
-html<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
-    <title>Quiz</title>
-</head>
-<body>
+    </div>
     <main>
-        <h1>{{ topic }} Quiz</h1>
+        <div class="quiz-header">
+            <div class="quiz-meta">{{ quiz[2] }} &mdash; Level {{ level }}</div>
+            <h1>{{ quiz[1] }}</h1>
+        </div>
 
-        <!-- This div shows one question at a time, JavaScript will control which one is visible -->
-        <div id="quiz-container">
-            {% for question in questions %}
-            <div class="question-card" id="question-{{ loop.index }}" style="display:none;">
-                <h3>Question {{ loop.index }} of {{ questions|length }}</h3>
-                <p>{{ question[1] }}</p>  <!-- question_text -->
-                <button class="option-btn" onclick="selectAnswer({{ question[0] }}, '{{ question[2] }}')">{{ question[2] }}</button>  <!-- option_a -->
-                <button class="option-btn" onclick="selectAnswer({{ question[0] }}, '{{ question[3] }}')">{{ question[3] }}</button>  <!-- option_b -->
-                <button class="option-btn" onclick="selectAnswer({{ question[0] }}, '{{ question[4] }}')">{{ question[4] }}</button>  <!-- option_c -->
-                <button class="option-btn" onclick="selectAnswer({{ question[0] }}, '{{ question[5] }}')">{{ question[5] }}</button>  <!-- option_d -->
+        <div class="progress-bar-wrap">
+            <div class="progress-bar-fill" id="progressBar" style="width: 0%"></div>
+        </div>
+        <div id="progressText" style="font-size:0.85rem;color:#666;margin-bottom:1rem;">
+            Question 1 of {{ questions|length }}
+        </div>
+
+        <form id="quizForm">
+        {% for q in questions %}
+        <div class="question-card {% if loop.first %}active{% endif %}" id="card-{{ loop.index0 }}">
+            <div class="question-number">Question {{ loop.index }} of {{ questions|length }}</div>
+
+            {% set time_limit = time_per_mark * q[6] %}
+            {% if time_limit > 0 %}
+            <div class="timer-wrap">
+                <span class="timer-label">Time:</span>
+                <span class="timer-display" id="timer-{{ loop.index0 }}">{{ time_limit }}</span>
+                <div class="timer-bar-wrap">
+                    <div class="timer-bar" id="timerBar-{{ loop.index0 }}"></div>
+                </div>
             </div>
-            {% endfor %}
-        </div>
+            {% endif %}
 
-        <!-- Timer display -->
-        <p>Time: <span id="timer">0</span>s</p>
+            <div class="question-text">{{ q[1] }}</div>
+
+            {% if q[2] or q[3] or q[4] or q[5] %}
+            <div class="options">
+                {% for letter, text in [('A', q[2]), ('B', q[3]), ('C', q[4]), ('D', q[5])] %}
+                {% if text %}
+                <label class="option-label" id="opt-{{ loop.index0 }}-{{ letter }}">
+                    <input type="radio" name="q_{{ q[0] }}" value="{{ letter }}"
+                        onchange="selectOption(this, '{{ loop.index0 }}')">
+                    <span class="option-letter">{{ letter }}</span>
+                    <span>{{ text }}</span>
+                </label>
+                {% endif %}
+                {% endfor %}
+            </div>
+            {% else %}
+            <textarea name="q_{{ q[0] }}_text" rows="5"
+                style="width:100%;padding:0.7rem;border:2px solid #e0e0e0;border-radius:8px;font-size:1rem;"
+                placeholder="Write your answer here..."></textarea>
+            {% endif %}
+
+            <div class="nav-buttons">
+                {% if not loop.first %}
+                <button type="button" class="btn btn-secondary"
+                    onclick="goTo({{ loop.index0 - 1 }})">← Previous</button>
+                {% endif %}
+                {% if not loop.last %}
+                <button type="button" class="btn btn-primary"
+                    onclick="goTo({{ loop.index0 + 1 }})">Next →</button>
+                {% else %}
+                <button type="button" class="btn btn-primary" onclick="submitQuiz()">
+                    Submit Quiz
+                </button>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+        </form>
     </main>
 
     <script>
-        let currentQuestion = 1;
-        const totalQuestions = {{ questions|length }};
-        let questionStartTime = Date.now();
-        let answers = {};   // stores { question_id: { answer, time } }
-        let timerInterval;
+        const QUIZ_ID = {{ quiz[0] }};
+        const TOTAL = {{ questions|length }};
+        const TIME_PER_MARK = {{ time_per_mark }};
+        const MARKS = [{% for q in questions %}{{ q[6] }},{% endfor %}];
 
-        // Show the first question when the page loads
-        function showQuestion(n) {
-            document.getElementById('question-' + n).style.display = 'block';
-            questionStartTime = Date.now();
-            startTimer();
-        }
+        let current = 0;
+        let answers = {};   // { q_id: { answer, time } }
+        let startTimes = {};
+        let timers = {};
+        let timeLeft = {};
 
-        // Timer that counts up each second
-        function startTimer() {
-            clearInterval(timerInterval);
-            document.getElementById('timer').textContent = '0';
-            timerInterval = setInterval(() => {
-                let elapsed = Math.floor((Date.now() - questionStartTime) / 1000);
-                document.getElementById('timer').textContent = elapsed;
+        // Initialise start time for first question
+        startTimes[0] = Date.now();
+        if (TIME_PER_MARK > 0) startTimer(0);
+
+        function startTimer(idx) {
+            const limit = TIME_PER_MARK * MARKS[idx];
+            timeLeft[idx] = limit;
+            updateTimerDisplay(idx);
+            timers[idx] = setInterval(() => {
+                timeLeft[idx]--;
+                updateTimerDisplay(idx);
+                if (timeLeft[idx] <= 0) {
+                    clearInterval(timers[idx]);
+                    autoAdvance(idx);
+                }
             }, 1000);
         }
 
-        // Called when user clicks an answer button
-        function selectAnswer(questionId, selectedOption) {
-            clearInterval(timerInterval);
-            let timeTaken = (Date.now() - questionStartTime) / 1000;  // time in seconds
+        function updateTimerDisplay(idx) {
+            const el = document.getElementById('timer-' + idx);
+            const bar = document.getElementById('timerBar-' + idx);
+            if (!el) return;
+            const limit = TIME_PER_MARK * MARKS[idx];
+            const left = timeLeft[idx];
+            const pct = Math.max(0, (left / limit) * 100);
+            el.textContent = formatTime(left);
+            bar.style.width = pct + '%';
+            const warn = left <= limit * 0.33;
+            const danger = left <= limit * 0.15;
+            el.className = 'timer-display' + (danger ? ' danger' : warn ? ' warning' : '');
+            bar.className = 'timer-bar' + (danger ? ' danger' : warn ? ' warning' : '');
+        }
 
-            // Store the answer and time for this question
-            answers[questionId] = { answer: selectedOption, time: timeTaken };
+        function formatTime(s) {
+            if (s <= 0) return '0:00';
+            const m = Math.floor(s / 60);
+            const sec = s % 60;
+            return m + ':' + String(sec).padStart(2, '0');
+        }
 
-            // Hide current question and move to next
-            document.getElementById('question-' + currentQuestion).style.display = 'none';
-            currentQuestion++;
-
-            if (currentQuestion <= totalQuestions) {
-                showQuestion(currentQuestion);
+        function autoAdvance(idx) {
+            recordAnswer(idx);
+            if (idx < TOTAL - 1) {
+                goTo(idx + 1);
             } else {
-                submitQuiz();  // all questions answered, submit
+                submitQuiz();
             }
         }
 
-        // Submits answers to Flask
+        function selectOption(input, cardIdx) {
+            // Highlight selected
+            document.querySelectorAll(`#card-${cardIdx} .option-label`).forEach(l => {
+                l.classList.remove('selected');
+            });
+            input.closest('.option-label').classList.add('selected');
+        }
+
+        function recordAnswer(idx) {
+            const card = document.getElementById('card-' + idx);
+            const radios = card.querySelectorAll('input[type=radio]');
+            const textarea = card.querySelector('textarea');
+            const elapsed = Math.round((Date.now() - (startTimes[idx] || Date.now())) / 1000);
+
+            if (radios.length > 0) {
+                const checked = card.querySelector('input[type=radio]:checked');
+                const name = radios[0].name;
+                const qId = name.replace('q_', '');
+                answers[qId] = { answer: checked ? checked.value : '', time: elapsed };
+            } else if (textarea) {
+                const name = textarea.name.replace('_text', '');
+                const qId = name.replace('q_', '');
+                answers[qId] = { answer: textarea.value, time: elapsed };
+            }
+        }
+
+        function goTo(idx) {
+            if (timers[current]) clearInterval(timers[current]);
+            recordAnswer(current);
+
+            document.getElementById('card-' + current).classList.remove('active');
+            current = idx;
+            document.getElementById('card-' + current).classList.add('active');
+
+            startTimes[current] = Date.now();
+            if (TIME_PER_MARK > 0 && !answers[current]) startTimer(current);
+
+            const pct = Math.round((current / TOTAL) * 100);
+            document.getElementById('progressBar').style.width = pct + '%';
+            document.getElementById('progressText').textContent =
+                `Question ${current + 1} of ${TOTAL}`;
+        }
+
         function submitQuiz() {
+            if (timers[current]) clearInterval(timers[current]);
+            recordAnswer(current);
+
             fetch('/submit_quiz', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ answers: answers, topic: '{{ topic }}' })
+                body: JSON.stringify({ quiz_id: QUIZ_ID, answers: answers })
             })
-            .then(response => response.json())
+            .then(r => r.json())
             .then(data => {
-                window.location.href = '/results/' + data.result_id;  // redirect to results page
+                window.location.href = '/results/' + data.result_id;
             });
         }
-
-        // Start the quiz on page load
-        showQuestion(1);
-    </script>
-</body>
-</html>
-Here's what each part does:
-
-Jinja loop renders all questions into hidden divs, JavaScript reveals them one at a time
-answers object collects each question's id, selected answer, and time taken
-selectAnswer() records the answer then moves to the next question
-submitQuiz() sends everything to Flask as JSON when finished
-
-Test this out and make sure questions are displaying and you can click through them. Once that's working we'll move to Step 4 — the Flask route that receives the answers and calculates your score and average time!You said: before we move on, I want the questions to be adaptable (can be edited) and currently all questions are on a document.before we move on, I want the questions to be adaptable (can be edited) and currently all questions are on a document. Is there a way that I can make a way that teachers can add questions and create quizzes BEFORE we focus on the functionality of the quiz?12 MayClaude responded: Great thinking — it's much better to sort this out now!Great thinking — it's much better to sort this out now! Since you already have an admin section, we'll add a question management page there. Here's the plan:
-
-The Plan
-Step 1 — Create addQuestion.html — A form where the teacher fills in the topic, level, question, and 4 options
-Step 2 — Flask route to display the form — A simple route that renders the form (admin only)
-Step 3 — Flask route to save the question — Receives the form data and inserts it into Questions.db
-Step 4 — Create manageQuestions.html — A page that lists all existing questions with an edit and delete button on each
-Step 5 — Flask routes to edit and delete — Handle updating and removing questions from the database
-
-This gives teachers full control to:
-
-✅ Add new questions
-✅ Edit existing ones
-✅ Delete questions
-
-Let's start with Step 1. Go ahead and create a blank addQuestion.html and share it here, just like you did with quizPage.html, and we'll build it out together!You said: can we also make it so this same addquestion page can allow teachers to put it under a specific quiz and the current questions.can we also make it so this same addquestion page can allow teachers to put it under a specific quiz and the current questions.py SQLite file looks like this import sqlite3 
-connection = sqlite3.Connection('database/Questions.db') #Creates a python connection to a database called 'LoginData.db'
-cursor = connection.cursor() #Creates a cursor object that python can point to, to reference the database
-
-cmd3 = '''CREATE TABLE IF NOT EXISTS questions (id INTEGER primary key AUTOINCREMENT,
-                                                topic TEXT NOT NULL,
-                                                level INTEGER NOT NULL,
-                                                question_text TEXT NOT NULL,
-                                                correct_answer TEXT NOT NULL,
-                                                option_a TEXT NOT NULL,
-                                                option_b TEXT NOT NULL,
-                                                option_c TEXT NOT NULL,
-                                                option_d TEXT NOT NULL)'''
-cursor.execute(cmd3)
-
-cmd4 = """INSERT INTO questions (topic, level, question_text, correct_answer, option_a, option_b, option_c, option_d) 
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?)"""  # ✅ use parameterised query for safety
-cursor.execute(cmd4, ('Geography', 1, 'What is the capital of France?', 'Paris', 'London', 'Berlin', 'Rome', 'Madrid'))
-connection.commit() # updates the database with this new record
-
-ans = cursor.execute("SELECT * FROM questions").fetchall()
-
-
-for i in ans:
-    print(i)Show more12 MayClaude responded: Good idea!Good idea! To support assigning questions to specific quizzes, we should add a quizzes table to your database so teachers can create named quizzes and assign questions to them. Here's the updated questions.py:
-pythonimport sqlite3 
-connection = sqlite3.connect('database/Questions.db')
-cursor = connection.cursor()
-
-# Stores named quizzes (e.g. "Atomic Structure Quiz")
-cmd1 = '''CREATE TABLE IF NOT EXISTS quizzes (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL,
-    topic TEXT NOT NULL,
-    level INTEGER NOT NULL
-)'''
-cursor.execute(cmd1)
-
-# Stores all questions
-cmd2 = '''CREATE TABLE IF NOT EXISTS questions (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    quiz_id INTEGER NOT NULL,
-    topic TEXT NOT NULL,
-    level INTEGER NOT NULL,
-    question_text TEXT NOT NULL,
-    correct_answer TEXT NOT NULL,
-    option_a TEXT NOT NULL,
-    option_b TEXT NOT NULL,
-    option_c TEXT NOT NULL,
-    option_d TEXT NOT NULL,
-    FOREIGN KEY (quiz_id) REFERENCES quizzes(id)
-)'''
-cursor.execute(cmd2)
-
-# Add a test quiz
-cursor.execute("INSERT INTO quizzes (name, topic, level) VALUES (?, ?, ?)",
-               ('World Capitals Quiz', 'Geography', 1))
-
-# Add a test question assigned to that quiz (quiz_id = 1)
-cursor.execute("""INSERT INTO questions (quiz_id, topic, level, question_text, correct_answer, option_a, option_b, option_c, option_d) 
-                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-               (1, 'Geography', 1, 'What is the capital of France?', 'Paris', 'London', 'Berlin', 'Rome', 'Madrid'))
-
-connection.commit()
-
-print("--- Quizzes ---")
-for i in cursor.execute("SELECT * FROM quizzes").fetchall():
-    print(i)
-
-print("--- Questions ---")
-for i in cursor.execute("SELECT * FROM questions").fetchall():
-    print(i)
-
-The key change is the quiz_id column in questions which links each question to a specific quiz. This means:
-
-A teacher can create multiple quizzes (e.g. "Atomic Structure Quiz", "Bonding Quiz")
-Each question belongs to one quiz
-The add question form will have a dropdown to pick which quiz it belongs to
-
-Before moving on, delete your old Questions.db file and rerun this script to recreate it cleanly with the new structure.
-Once that's done, create a blank addQuestion.html and share it and we'll build the form together!<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Add Questions</title>
-</head>
-<body>
-    
-</body>
-</html>Show more12 MayClaude responded: Perfect!Perfect! Here's the addQuestion.html form. It covers both creating a new quiz and adding questions to an existing one on the same page:
-html<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
-    <title>Add Questions</title>
-</head>
-<body>
-    <main>
-        <a href="/admin">← Back to Dashboard</a>
-
-        <!-- SECTION 1: Create a new quiz -->
-        <h2>Create a New Quiz</h2>
-        <form method="POST" action="/add_quiz">
-            <input type="text" name="name" placeholder="Quiz Name" required><br>
-            <input type="text" name="topic" placeholder="Topic (e.g. Atomic Structure)" required><br>
-            <select name="level" required>
-                <option value="" disabled selected>Select Level</option>
-                <option value="1">Level 1 - No time limit</option>
-                <option value="2">Level 2</option>
-                <option value="3">Level 3</option>
-                <option value="4">Level 4</option>
-                <option value="5">Level 5 - Time limited</option>
-            </select><br>
-            <button type="submit">Create Quiz</button>
-        </form>
-
-        <hr>
-
-        <!-- SECTION 2: Add a question to an existing quiz -->
-        <h2>Add a Question</h2>
-        <form method="POST" action="/add_question">
-
-            <!-- Dropdown populated from the quizzes table -->
-            <select name="quiz_id" required>
-                <option value="" disabled selected>Select a Quiz</option>
-                {% for quiz in quizzes %}
-                <option value="{{ quiz[0] }}">{{ quiz[1] }} ({{ quiz[2] }}, Level {{ quiz[3] }})</option>
-                {% endfor %}
-            </select><br>
-
-            <input type="text" name="topic" placeholder="Topic" required><br>
-
-            <select name="level" required>
-                <option value="" disabled selected>Select Level</option>
-                <option value="1">Level 1</option>
-                <option value="2">Level 2</option>
-                <option value="3">Level 3</option>
-                <option value="4">Level 4</option>
-                <option value="5">Level 5</option>
-            </select><br>
-
-            <textarea name="question_text" placeholder="Enter your question here" required></textarea><br>
-
-            <input type="text" name="option_a" placeholder="Option A" required><br>
-            <input type="text" name="option_b" placeholder="Option B" required><br>
-            <input type="text" name="option_c" placeholder="Option C" required><br>
-            <input type="text" name="option_d" placeholder="Option D" required><br>
-
-            <select name="correct_answer" required>
-                <option value="" disabled selected>Select Correct Answer</option>
-                <option value="A">A</option>
-                <option value="B">B</option>
-                <option value="C">C</option>
-                <option value="D">D</option>
-            </select><br>
-
-            <button type="submit">Add Question</button>
-        </form>
-    </main>
-</body>
-</html>
-Now we need two Flask routes to handle this. Add these to your app.py:
-python@app.route('/add_question_page')
-def add_question_page():
-    if not session.get('is_admin'):
-        return redirect(url_for('login'))
-    
-    connection = sqlite3.connect('database/Questions.db')
-    cursor = connection.cursor()
-    quizzes = cursor.execute('SELECT * FROM quizzes').fetchall()
-    connection.close()
-
-    return render_template('addQuestion.html', quizzes=quizzes)
-
-@app.route('/add_quiz', methods=['POST'])
-def add_quiz():
-    if not session.get('is_admin'):
-        return redirect(url_for('login'))
-
-    name = request.form.get('name')
-    topic = request.form.get('topic')
-    level = request.form.get('level')
-
-    connection = sqlite3.connect('database/Questions.db')
-    cursor = connection.cursor()
-    cursor.execute('INSERT INTO quizzes (name, topic, level) VALUES (?, ?, ?)', (name, topic, level))
-    connection.commit()
-    connection.close()
-
-    return redirect(url_for('add_question_page'))  # reload the page so new quiz appears in dropdown
-
-@app.route('/add_question', methods=['POST'])
-def add_question():
-    if not session.get('is_admin'):
-        return redirect(url_for('login'))
-
-    quiz_id = request.form.get('quiz_id')
-    topic = request.form.get('topic')
-    level = request.form.get('level')
-    question_text = request.form.get('question_text')
-    option_a = request.form.get('option_a')
-    option_b = request.form.get('option_b')
-    option_c = request.form.get('option_c')
-    option_d = request.form.get('option_d')
-    correct_answer = request.form.get('correct_answer')
-
-    # Map A/B/C/D to actual option text
-    options = {'A': option_a, 'B': option_b, 'C': option_c, 'D': option_d}
-    correct_text = options[correct_answer]  # stores the actual answer text not just the letter
-
-    connection = sqlite3.connect('database/Questions.db')
-    cursor = connection.cursor()
-    cursor.execute('''INSERT INTO questions (quiz_id, topic, level, question_text, correct_answer, option_a, option_b, option_c, option_d)
-                      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)''',
-                   (quiz_id, topic, level, question_text, correct_text, option_a, option_b, option_c, option_d))
-    connection.commit()
-    connection.close()
-
-    return redirect(url_for('add_question_page'))  # reload so they can keep adding questions
-A couple of things to note:
-
-The quiz dropdown is dynamically populated from your database so it always stays up to date
-The correct answer is stored as the actual text (e.g. "Paris") not just the letter, which makes checking answers easier later
-Both forms redirect back to the same page after submitting so teachers can keep adding without navigating away
-
-Add a link to /add_question_page in your teacher dashboard and give it a test! Once you're happy with it we'll move on to the manage/edit/delete questions page.You said: the next part of this project is actually having a quiz that people can do that will a) allow for a singular question to pop up on screen at one time b) show t…the next part of this project is actually having a quiz that people can do that will a) allow for a singular question to pop up on screen at one time b) show them their accuracy and how many they got wrong and c) show them exactly which questions they got wrong. I'd like to implement this next, can you help?Show more18:25Claude responded: Absolutely!Absolutely! Let's build this step by step. We already have the basic quizPage.html structure from earlier, so we just need to expand on it. Here's the plan:
-
-The Plan
-Step 1 — Update the quiz route in app.py to load questions by quiz_id instead of topic
-Step 2 — Build quizPage.html — one question at a time with a timer
-Step 3 — Build the submit route in app.py to calculate accuracy and store results
-Step 4 — Build results.html — shows score, accuracy, and which questions were wrong
-
-Let's start with Step 1. Replace your existing quiz route in app.py with this:
-python@app.route('/quiz/<int:quiz_id>')
-def quiz(quiz_id):
-    if 'user_id' not in session:
-        return redirect(url_for('login'))
-
-    connection = sqlite3.connect('database/Questions.db')
-    cursor = connection.cursor()
-
-    # Get the quiz name
-    quiz = cursor.execute('SELECT * FROM quizzes WHERE id=?', (quiz_id,)).fetchone()
-
-    # Get all questions for this quiz
-    questions = cursor.execute('''SELECT id, question_text, option_a, option_b, option_c, option_d 
-                                  FROM questions 
-                                  WHERE quiz_id=?''', (quiz_id,)).fetchall()
-    connection.close()
-
-    return render_template('quizPage.html', questions=questions, quiz=quiz)
-
-Now open your quizPage.html and share it and we'll build Step 2 together. Do you still have the version we wrote earlier, or is it still blank?You said: i've got the version you wrote earlieri've got the version you wrote earlier18:41Claude responded: Perfect!Perfect! Here's the updated quizPage.html that builds on what we wrote earlier, now with all three features you want:
-html<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
-    <title>{{ quiz[1] }}</title>
-</head>
-<body>
-    <main>
-        <h1>{{ quiz[1] }}</h1>
-
-        <!-- Progress and timer -->
-        <p>Question <span id="current-q">1</span> of {{ questions|length }}</p>
-        <p>Time: <span id="timer">0</span>s</p>
-
-        <!-- Question cards -->
-        <div id="quiz-container">
-            {% for question in questions %}
-            <div class="question-card" id="question-{{ loop.index }}" style="display:none;">
-                <h3>{{ question[1] }}</h3>
-                <div class="options">
-                    <button class="option-btn" onclick="selectAnswer({{ question[0] }}, '{{ question[2] }}', this)">{{ question[2] }}</button>
-                    <button class="option-btn" onclick="selectAnswer({{ question[0] }}, '{{ question[3] }}', this)">{{ question[3] }}</button>
-                    <button class="option-btn" onclick="selectAnswer({{ question[0] }}, '{{ question[4] }}', this)">{{ question[4] }}</button>
-                    <button class="option-btn" onclick="selectAnswer({{ question[0] }}, '{{ question[5] }}', this)">{{ question[5] }}</button>
-                </div>
-            </div>
-            {% endfor %}
-        </div>
-    </main>
-
-    <script>
-        let currentQuestion = 1;
-        const totalQuestions = {{ questions|length }};
-        let questionStartTime = Date.now();
-        let answers = {};
-        let timerInterval;
-
-        function showQuestion(n) {
-            document.getElementById('question-' + n).style.display = 'block';
-            document.getElementById('current-q').textContent = n;
-            questionStartTime = Date.now();
-            startTimer();
-        }
-
-        function startTimer() {
-            clearInterval(timerInterval);
-            document.getElementById('timer').textContent = '0';
-            timerInterval = setInterval(() => {
-                let elapsed = Math.floor((Date.now() - questionStartTime) / 1000);
-                document.getElementById('timer').textContent = elapsed;
-            }, 1000);
-        }
-
-        function selectAnswer(questionId, selectedOption, buttonEl) {
-            // Disables all the buttons so that the user can't change their answer after they've selected an answer
-            const buttons = buttonEl.parentElement.querySelectorAll('.option-btn');
-            buttons.forEach(btn => btn.disabled = true);
-            buttonEl.style.backgroundColor = '#a0c4ff';  // highlight selected answer
-
-            clearInterval(timerInterval);
-            let timeTaken = (Date.now() - questionStartTime) / 1000;
-
-            answers[questionId] = { answer: selectedOption, time: timeTaken };
-
-            // Short delay so that the user can see their answer before they move on
-            setTimeout(() => {
-                document.getElementById('question-' + currentQuestion).style.display = 'none';
-                currentQuestion++;
-
-                if (currentQuestion <= totalQuestions) {
-                    showQuestion(currentQuestion);
-                } else {
-                    submitQuiz();
-                }
-            }, 500);
-        }
-
-        // Submits answers to Flask
-        function submitQuiz() {
-            fetch('/submit_quiz', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ answers: answers, quiz_id: '{{ quiz[0] }}' })
-            })
-            .then(response => response.json())
-            .then(data => {
-                window.location.href = '/results/' + data.result_id;  // redirect to results page
-            });
-        }
-
-        showQuestion(1);
     </script>
 </body>
 </html>

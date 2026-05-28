@@ -1,6 +1,6 @@
 @import url(https://fonts.googleapis.com/css?family=Cinzel+Decorative);
 @import url(https://fonts.googleapis.com/css?family=Metamorphous);
-@import url(https://fonts.goolgeapis.com/css?family=Macondo);
+@import url(https://fonts.googleapis.com/css?family=Macondo);
 
 body {
     background-color: #eeebdd;
@@ -52,6 +52,12 @@ h2 {
     color: #810000;
 }
 
+h1 {
+    text-align: center;
+    font-family: Cinzel Decorative;
+}
+
+
 input {
     padding: 5px;
     background-color: white;
@@ -81,4 +87,29 @@ select {
     border: 1px solid #810000;
     font-family: Macondo;
     font-size: 15px;
+}
+
+.results-summary {
+    background-color: #f0f4ff;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+.wrong-question-card {
+    background-color: #fff0f0;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 15px;
+    border-left: 4px solid #ff4444;
+}
+
+.wrong-answer {
+    color: #ff4444;
+    font-weight: bold;
+}
+
+.correct-answer{
+    color: #00aa44;
+    font-weight: bold;
 }

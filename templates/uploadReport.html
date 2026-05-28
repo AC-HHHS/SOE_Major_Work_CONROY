@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='main.css') }}">
+    <title>Import Report</title>
+    <style>
+        .report-box { border-radius: 10px; padding: 1.5rem; margin-bottom: 1.5rem; }
+        .success-box { background: #f0fff4; border: 2px solid #28a745; }
+        .error-box   { background: #fff8f0; border: 2px solid #e67e22; }
+        .success-box h2 { color: #28a745; margin-top: 0; }
+        .error-box h2   { color: #e67e22; margin-top: 0; }
+        .error-list { margin: 0; padding-left: 1.2rem; }
+        .error-list li { margin-bottom: 0.4rem; font-size: 0.9rem; font-family: monospace; }
+        .btn { display: inline-block; padding: 0.6rem 1.4rem; border-radius: 7px;
+               background: #2c7be5; color: white; text-decoration: none;
+               font-weight: 600; font-size: 0.95rem; }
+        .btn:hover { background: #1a6bd4; }
+    </style>
+</head>
+<body>
+    <div class="banner">
+        <div class="banner-content">
+            <a href="{{ url_for('logout') }}">Log Out</a>
+            <a href="{{ url_for('add_question_page') }}">Back to Question Manager</a>
+        </div>
+    </div>
+    <main>
+        <h1>CSV Import Report</h1>
+
+        <div class="report-box success-box">
+            <h2>✓ {{ imported }} question{{ 's' if imported != 1 else '' }} imported successfully</h2>
+            {% if imported > 0 %}
+            <p>These have been added to the database and are ready to use in quizzes.</p>
+            {% endif %}
+        </div>
+
+        {% if errors %}
+        <div class="report-box error-box">
+            <h2>⚠ {{ errors|length }} row{{ 's' if errors|length != 1 else '' }} had errors</h2>
+            <p>These rows were skipped. Fix them in your CSV and re-upload:</p>
+            <ul class="error-list">
+                {% for error in errors %}
+                <li>{{ error }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+
+        <a href="{{ url_for('add_question_page') }}" class="btn">Back to Question Manager</a>
+    </main>
+</body>
+</html>

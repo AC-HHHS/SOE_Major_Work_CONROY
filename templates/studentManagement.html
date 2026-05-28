@@ -7,6 +7,14 @@
     <title>Document</title>
 </head>
 <body>
+    <div class="banner">
+            <div class="banner-content">
+                <a href="{{ url_for('logout') }}">Log Out</a>   
+                <a href="/admin"> Go Back</a>
+            </div>
+        </div>
+    <main>
+
     <h2>User Management</h2>
     <table>
         <thead>
@@ -32,5 +40,6 @@
             {% endfor %}
         </tbody>
     </table>
+    </main>
 </body>
 </html>

@@ -1,4 +1,7 @@
-import sqlite3 
+import sqlite3
+from tkinter import ON 
+
+foreign_keys = ON; #Enables the use of foreign keys
 connection = sqlite3.Connection('database/Questions.db') #Creates a python connection to a database called 'LoginData.db'
 cursor = connection.cursor() #Creates a cursor object that python can point to, to reference the database
 
@@ -18,7 +21,9 @@ cmd4 = '''CREATE TABLE IF NOT EXISTS questions (id INTEGER primary key AUTOINCRE
                                                 option_c TEXT NOT NULL,
                                                 option_d TEXT NOT NULL,
                                                 quiz_id INTEGER NOT NULL,
-                                                Foreign key (quiz_id) references quizzes(id))'''
+                                                question_type TEXT DEFAULT 'multiple_choice',
+                                                marks INTEGER DEFAULT 1,
+                                                FOREIGN KEY (quiz_id) REFERENCES quizzes(id))'''
 
 cursor.execute(cmd4)                           
 

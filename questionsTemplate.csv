@@ -1,0 +1,4 @@
+quiz_id,topic,level,question_type,question_text,option_a,option_b,option_c,option_d,correct_answer,marks
+1,Module 5: Equilibrium Constant,1,mc,"At equilibrium a 1.00 L vessel contains 0.0430 mol of H2, 0.0620 mol of I2, and 0.358 mol of HI. Which is closest to Keq for H2(g) + I2(g) ⇌ 2HI(g)?",0.0208,48.1,134,269,B,1
+1,Module 5: Equilibrium Constant,2,mc,What is the equilibrium expression for 2NOCl(g) ⇌ 2NO(g) + Cl2(g)?,[NO]²[Cl2] / [NOCl]²,[NO][Cl2] / [NOCl],[NOCl]² / [NO]²[Cl2],2[NOCl] / 2[NO][Cl2],A,1
+1,Module 5: Equilibrium Constant,3,short,Calculate the value of the equilibrium constant for H2(g) + I2(g) ⇌ 2HI(g) at 700 K given [H2]=[I2]=0.326 mol/L and [HI]=2.39 mol/L.,,,,,,2

@@ -4,73 +4,189 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" type = "text/css" href="{{ url_for('static', filename='main.css') }}">
-    <title>Create Quiz</title>
+    <title>Question Manager</title>
+    <style>
+        .section { background: white; border: 1px solid #e0e0e0; border-radius: 10px;
+                   padding: 1.5rem; margin-bottom: 1.5rem; }
+        .section h2 { margin-top: 0; font-size: 1.2rem; border-bottom: 2px solid #f0f0f0;
+                      padding-bottom: 0.6rem; margin-bottom: 1.2rem; }
+        label { display: block; font-weight: 600; font-size: 0.88rem;
+                margin-bottom: 0.25rem; margin-top: 0.8rem; }
+        input[type=text], textarea, select, input[type=file] {
+            width: 100%; padding: 0.55rem 0.8rem; border: 2px solid #e0e0e0;
+            border-radius: 7px; font-size: 0.93rem; box-sizing: border-box;
+        }
+        input:focus, textarea:focus, select:focus { border-color: #2c7be5; outline: none; }
+        .btn { padding: 0.55rem 1.2rem; border-radius: 7px; border: none;
+               font-size: 0.9rem; font-weight: 600; cursor: pointer; }
+        .btn-primary { background: #2c7be5; color: white; margin-top: 0.8rem; }
+        .btn-primary:hover { background: #1a6bd4; }
+        .btn-danger { background: #e74c3c; color: white; padding: 0.3rem 0.75rem;
+                      font-size: 0.8rem; }
+        .btn-danger:hover { background: #c0392b; }
+        .btn-edit { background: #f0f5ff; color: #2c7be5; border: 1px solid #2c7be5;
+                    padding: 0.3rem 0.75rem; font-size: 0.8rem; text-decoration: none;
+                    border-radius: 7px; font-weight: 600; }
+        .btn-edit:hover { background: #dce8ff; }
+
+        /* CSV hint box */
+        .csv-hint { background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 7px;
+                    padding: 0.8rem 1rem; margin-bottom: 1rem; font-size: 0.85rem; }
+        .csv-hint code { background: #e9ecef; padding: 0.1rem 0.35rem; border-radius: 4px;
+                         font-size: 0.82rem; }
+
+        /* Questions table */
+        table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+        th { background: #f8f9fa; text-align: left; padding: 0.6rem 0.8rem;
+             border-bottom: 2px solid #dee2e6; font-size: 0.82rem; color: #555; }
+        td { padding: 0.55rem 0.8rem; border-bottom: 1px solid #f0f0f0;
+             vertical-align: middle; }
+        tr:hover td { background: #fafbfc; }
+        .q-text { max-width: 300px; white-space: nowrap; overflow: hidden;
+                  text-overflow: ellipsis; }
+        .level-badge { display: inline-block; padding: 0.15rem 0.55rem;
+                       border-radius: 12px; font-size: 0.78rem; font-weight: 700;
+                       background: #f0f5ff; color: #2c7be5; }
+        .actions { display: flex; gap: 0.4rem; align-items: center; }
+
+        .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+        @media (max-width: 700px) { .two-col { grid-template-columns: 1fr; } }
+    </style>
 </head>
 <body>
+    <div class="banner">
+        <div class="banner-content">
+            <a href="{{ url_for('logout') }}">Log Out</a>
+            <a href="/admin">Go Back</a>
+        </div>
+    </div>
     <main>
-        <div class="banner">
-            <div class="banner-content">
-                <a href="{{ url_for('logout') }}">Log Out</a>   
-                <a href="/admin"> Go Back</a>
+        <h1>Question Manager</h1>
+
+        <div class="two-col">
+            <!-- Create Quiz -->
+            <div class="section">
+                <h2>Create a New Quiz</h2>
+                <form method="POST" action="/add_quiz">
+                    <label>Quiz Name</label>
+                    <input type="text" name="name" placeholder="e.g. Equilibrium Constant" required>
+                    <label>Topic</label>
+                    <input type="text" name="topic" placeholder="e.g. Module 5: Equilibrium" required>
+                    <label>Level</label>
+                    <select name="level" required>
+                        <option value="" disabled selected>Select level</option>
+                        {% for i in range(1,6) %}
+                        <option value="{{ i }}">Level {{ i }}</option>
+                        {% endfor %}
+                    </select>
+                    <button type="submit" class="btn btn-primary">Create Quiz</button>
+                </form>
+            </div>
+
+            <!-- Add Single Question -->
+            <div class="section">
+                <h2>Add a Question Manually</h2>
+                <form method="POST" action="/add_question">
+                    <label>Quiz</label>
+                    <select name="quiz_id" required>
+                        <option value="" disabled selected>Select quiz</option>
+                        {% for quiz in quizzes %}
+                        <option value="{{ quiz[0] }}">{{ quiz[1] }} — Level {{ quiz[3] }}</option>
+                        {% endfor %}
+                    </select>
+                    <label>Topic</label>
+                    <input type="text" name="topic" placeholder="Topic" required>
+                    <label>Level</label>
+                    <select name="level" required>
+                        <option value="" disabled selected>Select level</option>
+                        {% for i in range(1,6) %}
+                        <option value="{{ i }}">Level {{ i }}</option>
+                        {% endfor %}
+                    </select>
+                    <label>Marks</label>
+                    <input type="text" name="marks" placeholder="1" value="1" required>
+                    <label>Question Text</label>
+                    <textarea name="question_text" rows="3" placeholder="Enter question..." required></textarea>
+                    <label>Option A</label>
+                    <input type="text" name="option_a" placeholder="Option A">
+                    <label>Option B</label>
+                    <input type="text" name="option_b" placeholder="Option B">
+                    <label>Option C</label>
+                    <input type="text" name="option_c" placeholder="Option C">
+                    <label>Option D</label>
+                    <input type="text" name="option_d" placeholder="Option D">
+                    <label>Correct Answer</label>
+                    <select name="correct_answer">
+                        <option value="" disabled selected>Select correct answer</option>
+                        {% for letter in ['A','B','C','D'] %}
+                        <option value="{{ letter }}">Option {{ letter }}</option>
+                        {% endfor %}
+                    </select>
+                    <button type="submit" class="btn btn-primary">Add Question</button>
+                </form>
             </div>
         </div>
 
-        <div id="quiz-creation">
-        <h2> Create A New Quiz</h2>
-        <form method="POST" action="/add_quiz">
-            <input type="text" name="name" placeholder="Quiz Name" required><br>
-            <input type="text" name="topic" placeholder="Topic (e.g. Module 5: Equilibrium)" required><br>
-            <select name="level" required>
-                <option value="" disabled selected>Select Level</option>
-                <option value="1">Level 1 </option>
-                <option value="2">Level 2 </option>
-                <option value="3">Level 3 </option>
-                <option value="4">Level 4 </option>
-                <option value="5">Level 5 </option>
-            </select><br>
-            <button type="submit">Create Quiz</button>
-        </form>
+        <!-- CSV Upload -->
+        <div class="section">
+            <h2>Bulk Import from CSV</h2>
+            <div class="csv-hint">
+                <strong>CSV column order:</strong>
+                <code>quiz_id</code>, <code>topic</code>, <code>level</code>,
+                <code>question_type</code> (mc/short/long), <code>question_text</code>,
+                <code>option_a</code>, <code>option_b</code>, <code>option_c</code>,
+                <code>option_d</code>, <code>correct_answer</code> (A/B/C/D),
+                <code>marks</code><br>
+                Leave option and correct_answer columns blank for short/long answer questions.
+                First row must be the header row.
+            </div>
+            <form method="POST" action="/upload_questions" enctype="multipart/form-data">
+                <label>Select CSV File</label>
+                <input type="file" name="csv_file" accept=".csv" required>
+                <button type="submit" class="btn btn-primary">Upload &amp; Import</button>
+            </form>
         </div>
 
-        <div id="question-creation">
-        <h2> Add a Question</h2>
-        <form method = "POST" action="/add_question">
-            <select name="quiz_id" required>
-                <option value="" disabled selected>Select Quiz</option>
-                {% for quiz in quizzes %}
-                    <option value="{{ quiz[0] }}">{{ quiz[1] }} ({{ quiz[2] }}), Level {{ quiz[3] }}</option>
+        <!-- All Questions Table -->
+        <div class="section">
+            <h2>All Questions ({{ questions|length }})</h2>
+            {% if questions %}
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Quiz</th>
+                        <th>Level</th>
+                        <th>Type</th>
+                        <th>Question</th>
+                        <th>Marks</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for q in questions %}
+                <tr>
+                    <td>{{ q[0] }}</td>
+                    <td>{{ q[10] }}</td>
+                    <td><span class="level-badge">{{ q[2] }}</span></td>
+                    <td>{{ q[11] if q[11] else 'mc' }}</td>
+                    <td class="q-text" title="{{ q[3] }}">{{ q[3] }}</td>
+                    <td>{{ q[12] if q[12] else 1 }}</td>
+                    <td class="actions">
+                        <a href="/edit_question/{{ q[0] }}" class="btn-edit">Edit</a>
+                        <form method="POST" action="/delete_question/{{ q[0] }}"
+                              onsubmit="return confirm('Delete this question?')">
+                            <button type="submit" class="btn btn-danger">Delete</button>
+                        </form>
+                    </td>
+                </tr>
                 {% endfor %}
-            </select><br>
-            <input type="text" name="topic" placeholder="Topic" required><br>
-
-            <select name="level" required>
-                <option value="" disabled selected>Select Level</option>
-                <option value="1">Level 1 </option>
-                <option value="2">Level 2 </option>
-                <option value="3">Level 3 </option>
-                <option value="4">Level 4 </option>
-                <option value="5">Level 5 </option>
-                </select><br>
-
-                <textarea name="question_text" placeholder="Enter your question here..." required></textarea><br>
-
-                <input type="text" name="option_a" placeholder="Option A" required><br>
-                <input type="text" name="option_b" placeholder="Option B" required><br>
-                <input type="text" name="option_c" placeholder="Option C" required><br>
-                <input type="text" name="option_d" placeholder="Option D" required><br>
-
-                <select name="correct_answer" required>
-                    <option value="" disabled selected>Select Correct Answer</option>
-                    <option value="A">Option A</option>
-                    <option value="B">Option B</option>
-                    <option value="C">Option C</option>
-                    <option value="D">Option D</option>
-                </select><br>
-
-                <button type="submit">Add Question</button>
-        </form>
+                </tbody>
+            </table>
+            {% else %}
+            <p style="color:#888;">No questions yet. Add one above or upload a CSV.</p>
+            {% endif %}
         </div>
-
     </main>
 </body>
 </html>
