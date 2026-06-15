@@ -42,27 +42,108 @@ def home():
     if 'user_id' not in session:
         return redirect(url_for('login'))
 
-    connection = sqlite3.connect('database/LoginData.db')
-    cursor = connection.cursor()
-    cursor.execute('SELECT first_name, last_name, email FROM users WHERE id=?', (session['user_id'],))
-    user = cursor.fetchone()
-    connection.close()
+    # Redirect admins to teacher dashboard
+    if session.get('is_admin'):
+        return redirect(url_for('teacher_home'))
 
-    return render_template('dashboard.html', first_name=user[0], last_name=user[1], email=user[2]) 
+    login_conn = sqlite3.connect('database/LoginData.db')
+    login_cursor = login_conn.cursor()
+    login_cursor.execute('SELECT first_name, last_name, email, level FROM users WHERE id=?', (session['user_id'],))
+    user = login_cursor.fetchone()
 
-# Pracctice code for teacher dashboard - to be deleted later
+    # Recent results for this student
+    try:
+        login_cursor.execute('''
+            SELECT id, quiz_id, accuracy, avg_time, date
+            FROM results WHERE user_id = ?
+            ORDER BY date DESC LIMIT 5
+        ''', (session['user_id'],))
+        recent_raw = login_cursor.fetchall()
+    except Exception:
+        recent_raw = []
+    login_conn.close()
+
+    # Attach quiz names
+    q_conn = sqlite3.connect('database/Questions.db')
+    q_cursor = q_conn.cursor()
+    recent = []
+    for r in recent_raw:
+        quiz = q_cursor.execute('SELECT name FROM quizzes WHERE id=?', (r[1],)).fetchone()
+        quiz_name = quiz[0] if quiz else 'Unknown Quiz'
+        recent.append({'result_id': r[0], 'quiz_name': quiz_name,
+                       'accuracy': r[2], 'avg_time': r[3], 'date': r[4]})
+
+    # All quizzes grouped by topic
+    quizzes = q_cursor.execute('SELECT id, name, topic, level FROM quizzes ORDER BY topic, name').fetchall()
+    q_conn.close()
+
+    topics = {}
+    for quiz in quizzes:
+        topic = quiz[2]
+        if topic not in topics:
+            topics[topic] = []
+        topics[topic].append(quiz)
+
+    return render_template('dashboard.html',
+        first_name=user[0], last_name=user[1], email=user[2],
+        user_level=user[3] if user[3] else 1,
+        topics=topics,
+        recent=recent) 
+
+
 @app.route('/teacher_dashboard')
 def teacher_home():
     if 'user_id' not in session:
         return redirect(url_for('login'))
+    if not session.get('is_admin'):
+        return redirect(url_for('home'))
 
-    connection = sqlite3.connect('database/LoginData.db')
-    cursor = connection.cursor()
-    cursor.execute('SELECT first_name, last_name, email FROM users WHERE id=?', (session['user_id'],))
-    user = cursor.fetchone()
-    connection.close()
+    login_conn = sqlite3.connect('database/LoginData.db')
+    login_cursor = login_conn.cursor()
 
-    return render_template('teacherHome.html', first_name=user[0], last_name=user[1], email=user[2]) 
+    login_cursor.execute('SELECT first_name, last_name, email FROM users WHERE id=?', (session['user_id'],))
+    user = login_cursor.fetchone()
+
+    # Summary stats
+    total_students = login_cursor.execute(
+        "SELECT COUNT(*) FROM users WHERE is_admin = 0").fetchone()[0]
+    total_attempts = login_cursor.execute(
+        "SELECT COUNT(*) FROM results").fetchone()[0]
+    avg_accuracy = login_cursor.execute(
+        "SELECT ROUND(AVG(accuracy),1) FROM results").fetchone()[0] or 0
+
+    # Recent activity — last 10 attempts across all students
+    recent_raw = login_cursor.execute('''
+        SELECT r.id, r.user_id, u.first_name, u.last_name,
+               r.quiz_id, r.accuracy, r.avg_time, r.date
+        FROM results r
+        JOIN users u ON r.user_id = u.id
+        ORDER BY r.date DESC LIMIT 10
+    ''').fetchall()
+    login_conn.close()
+
+    # Attach quiz names to recent activity
+    q_conn = sqlite3.connect('database/Questions.db')
+    q_cursor = q_conn.cursor()
+    total_quizzes = q_cursor.execute("SELECT COUNT(*) FROM quizzes").fetchone()[0]
+    total_questions = q_cursor.execute("SELECT COUNT(*) FROM questions").fetchone()[0]
+
+    recent = []
+    for r in recent_raw:
+        quiz = q_cursor.execute('SELECT name FROM quizzes WHERE id=?', (r[4],)).fetchone()
+        recent.append({
+            'result_id': r[0], 'user_id': r[1],
+            'student': f"{r[2]} {r[3]}",
+            'quiz_name': quiz[0] if quiz else 'Unknown',
+            'accuracy': r[5], 'avg_time': r[6], 'date': r[7]
+        })
+    q_conn.close()
+
+    return render_template('teacherHome.html',
+        first_name=user[0], last_name=user[1], email=user[2],
+        total_students=total_students, total_quizzes=total_quizzes,
+        total_questions=total_questions, total_attempts=total_attempts,
+        avg_accuracy=avg_accuracy, recent=recent) 
 
 @app.route('/register') # A route that triggers the function signUp() when a GET request is made to the URL "/signUp"
 def register():
@@ -164,7 +245,42 @@ def admin_users():
 
 @app.route("/usermanagement")
 def user_management():
-    return render_template("studentManagement.html")
+    if not session.get('is_admin'):
+        return redirect(url_for('login'))
+
+    login_conn = sqlite3.connect('database/LoginData.db')
+    login_cursor = login_conn.cursor()
+
+    users = login_cursor.execute(
+        "SELECT first_name, last_name, email, is_admin, id, level FROM users ORDER BY last_name"
+    ).fetchall()
+
+    # Class-wide stats
+    total_students = login_cursor.execute(
+        "SELECT COUNT(*) FROM users WHERE is_admin = 0").fetchone()[0]
+    class_avg = login_cursor.execute(
+        "SELECT ROUND(AVG(accuracy),1) FROM results").fetchone()[0] or 0
+
+    login_conn.close()
+
+    # Most attempted quiz
+    q_conn = sqlite3.connect('database/Questions.db')
+    q_cursor = q_conn.cursor()
+    login_conn2 = sqlite3.connect('database/LoginData.db')
+    login_cursor2 = login_conn2.cursor()
+    top_quiz_row = login_cursor2.execute(
+        "SELECT quiz_id, COUNT(*) as cnt FROM results GROUP BY quiz_id ORDER BY cnt DESC LIMIT 1"
+    ).fetchone()
+    top_quiz_name = ''
+    if top_quiz_row:
+        q = q_cursor.execute('SELECT name FROM quizzes WHERE id=?', (top_quiz_row[0],)).fetchone()
+        top_quiz_name = q[0] if q else 'Unknown'
+    q_conn.close()
+    login_conn2.close()
+
+    return render_template("studentManagement.html",
+        users=users, total_students=total_students,
+        class_avg=class_avg, top_quiz_name=top_quiz_name)
 
 
 @app.route('/add_quiz', methods=['POST'])
@@ -183,6 +299,8 @@ def add_quiz():
     connection.close()
 
     return redirect(url_for('add_question_page'))
+
+@app.route('/add_question_page')
 def add_question_page():
     if not session.get('is_admin'):
         return redirect(url_for('login'))
@@ -332,7 +450,7 @@ def upload_questions():
         imported += 1
     connection.commit()
     connection.close()
-    return render_template('uploadReport.html', imported=imported, errors=errors)
+    return render_template('uploadQuestions.html', imported=imported, errors=errors)
 
 
 @app.route('/edit_question/<int:question_id>', methods=['GET', 'POST'])
@@ -456,9 +574,50 @@ def results(result_id):
     return render_template('results.html', score=result[0], accuracy=result[1], avg_time=result[2], wrong_questions=wrong_questions, date=result[3])
 
 
+@app.route('/student/<int:user_id>')
+def student_detail(user_id):
+    if not session.get('is_admin'):
+        return redirect(url_for('login'))
+
+    login_conn = sqlite3.connect('database/LoginData.db')
+    login_cursor = login_conn.cursor()
+
+    student = login_cursor.execute(
+        'SELECT first_name, last_name, email, level FROM users WHERE id=?', (user_id,)
+    ).fetchone()
+
+    attempts = login_cursor.execute('''
+        SELECT id, quiz_id, score, accuracy, avg_time, date
+        FROM results WHERE user_id = ?
+        ORDER BY date DESC
+    ''', (user_id,)).fetchall()
+
+    # Overall stats for this student
+    stats = login_cursor.execute('''
+        SELECT COUNT(*), ROUND(AVG(accuracy),1), ROUND(AVG(avg_time),1)
+        FROM results WHERE user_id = ?
+    ''', (user_id,)).fetchone()
+    login_conn.close()
+
+    # Attach quiz names
+    q_conn = sqlite3.connect('database/Questions.db')
+    q_cursor = q_conn.cursor()
+    history = []
+    for a in attempts:
+        quiz = q_cursor.execute('SELECT name FROM quizzes WHERE id=?', (a[1],)).fetchone()
+        history.append({
+            'result_id': a[0], 'quiz_name': quiz[0] if quiz else 'Unknown',
+            'score': a[2], 'accuracy': a[3], 'avg_time': a[4], 'date': a[5]
+        })
+    q_conn.close()
+
+    return render_template('studentDetails.html',
+        student=student, user_id=user_id, history=history,
+        total_attempts=stats[0], avg_accuracy=stats[1], avg_time=stats[2])
+
+
 
 
 if __name__ == '__main__':
-    app.run(debug=True)
-    
+    app.run(debug=True) 
  # Starts the Flask application using the Waitress WSGI server, listening on all available network interfaces (

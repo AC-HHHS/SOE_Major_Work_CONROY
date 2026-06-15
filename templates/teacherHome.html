@@ -1,30 +1,162 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <style>
-        button { padding: 50px; font-size: 15px; width: 80px; }
-    </style>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" type = "text/css" href="{{ url_for('static', filename='main.css') }}">
-    <title>Add Questions</title>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='main.css') }}">
+    <title>Teacher Dashboard</title>
+    <style>
+        .welcome-section { text-align: center; padding: 2rem 1rem 1rem; }
+        .welcome-sub { color: #810000; font-family: Metamorphous; font-size: 0.95rem; }
+        .teacher-pill {
+            display: inline-block;
+            background: #1b1717; color: #eeebdd;
+            font-family: Cinzel Decorative; font-size: 0.75rem;
+            padding: 0.3rem 1rem; border-radius: 20px; letter-spacing: 0.05em;
+        }
+        .divider { border: none; border-top: 2px solid #d4c9b0; margin: 0.5rem 1.5rem 1.5rem; }
+
+        /* Stats bar */
+        .stats-bar {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 1rem; padding: 0 1.5rem; margin-bottom: 1.5rem;
+        }
+        .stat-card {
+            background: white; border: 2px solid #d4c9b0; border-radius: 10px;
+            padding: 1.1rem 1rem; text-align: center;
+        }
+        .stat-value {
+            font-family: Cinzel Decorative; font-size: 1.8rem;
+            color: #810000; line-height: 1; margin-bottom: 0.3rem;
+        }
+        .stat-label { font-size: 0.78rem; color: #666; }
+
+        /* Action cards */
+        .actions-wrap { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; padding: 0 1.5rem; margin-bottom: 2rem; }
+        .action-card {
+            background: white; border: 2px solid #d4c9b0; border-radius: 10px;
+            padding: 1.4rem 1.2rem; text-decoration: none; color: #1b1717;
+            transition: border-color 0.2s, box-shadow 0.2s, transform 0.15s;
+            display: flex; flex-direction: column; gap: 0.35rem;
+        }
+        .action-card:hover {
+            border-color: #810000; box-shadow: 0 4px 16px rgba(129,0,0,0.12);
+            transform: translateY(-2px); color: #1b1717;
+        }
+        .action-icon { font-size: 1.6rem; }
+        .action-title { font-family: Cinzel Decorative; font-size: 0.85rem; color: #810000; }
+        .action-desc { font-size: 0.8rem; color: #666; line-height: 1.4; }
+
+        /* Recent activity table */
+        .activity-wrap { padding: 0 1.5rem 2rem; }
+        .activity-wrap h2 { text-align: left; font-size: 1rem; }
+        .data-table {
+            width: 100%; border-collapse: collapse; font-size: 0.87rem;
+            background: white; border-radius: 10px; overflow: hidden; border: 2px solid #d4c9b0;
+        }
+        .data-table th {
+            background: #1b1717; color: #eeebdd; font-family: Metamorphous;
+            padding: 0.6rem 1rem; text-align: left; font-weight: normal;
+        }
+        .data-table td { padding: 0.55rem 1rem; border-bottom: 1px solid #eeebdd; }
+        .data-table tr:last-child td { border-bottom: none; }
+        .data-table tr:hover td { background: #faf8f3; }
+        .accuracy-good { color: #28a745; font-weight: bold; }
+        .accuracy-mid  { color: #e67e22; font-weight: bold; }
+        .accuracy-low  { color: #e74c3c; font-weight: bold; }
+        .tbl-link { color: #810000; font-weight: bold; text-decoration: underline; padding: 0; }
+        .tbl-link:hover { color: #FF3333; }
+        .no-data { text-align: center; color: #888; font-style: italic; padding: 2rem; }
+    </style>
 </head>
 <body>
-        <div class="banner">
-            <div class="banner-content">
-                <a href="{{ url_for('logout') }}">Log Out</a>   
-                <a href="/admin"> Go Back</a>
-            </div>
+    <div class="banner">
+        <div class="banner-content">
+            <a href="{{ url_for('logout') }}">Log Out</a>
         </div>
-        
-        <main>
-            <h1>Welcome, {{ first_name }} {{ last_name }}</h1>
-            <h2> What would you like to do? </h2>
-            <img class = "showUser">
+    </div>
 
-        <button href = "createQuiz.html"> Create Quiz + Questions</button>
+    <div class="welcome-section">
+        <h1>Welcome, {{ first_name }}.</h1>
+        <p class="welcome-sub">{{ email }}</p>
+        <span class="teacher-pill">Teacher / Admin</span>
+    </div>
+
+    <hr class="divider">
+
+    <!-- Stats -->
+    <div class="stats-bar">
+        <div class="stat-card">
+            <div class="stat-value">{{ total_students }}</div>
+            <div class="stat-label">Students</div>
         </div>
+        <div class="stat-card">
+            <div class="stat-value">{{ total_quizzes }}</div>
+            <div class="stat-label">Quizzes</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">{{ total_questions }}</div>
+            <div class="stat-label">Questions</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">{{ total_attempts }}</div>
+            <div class="stat-label">Attempts</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">{{ avg_accuracy }}%</div>
+            <div class="stat-label">Class Avg Accuracy</div>
+        </div>
+    </div>
 
-    </main>
+    <!-- Quick actions -->
+    <div class="actions-wrap">
+        <a href="{{ url_for('add_question_page') }}" class="action-card">
+            <span class="action-icon">📝</span>
+            <span class="action-title">Manage Questions</span>
+            <span class="action-desc">Add, edit, delete questions and import from CSV.</span>
+        </a>
+        <a href="{{ url_for('user_management') }}" class="action-card">
+            <span class="action-icon">👥</span>
+            <span class="action-title">Student Management</span>
+            <span class="action-desc">View all students, results, and promote admins.</span>
+        </a>
+        <a href="{{ url_for('admin') }}" class="action-card">
+            <span class="action-icon">⚙️</span>
+            <span class="action-title">Admin Panel</span>
+            <span class="action-desc">Full data overview and system settings.</span>
+        </a>
+    </div>
+
+    <hr class="divider">
+
+    <!-- Recent activity -->
+    <div class="activity-wrap">
+        <h2>Recent Activity</h2>
+        {% if recent %}
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Student</th><th>Quiz</th><th>Accuracy</th>
+                    <th>Avg Time / Q</th><th>Date</th><th></th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for r in recent %}
+            <tr>
+                <td><a href="{{ url_for('student_detail', user_id=r.user_id) }}" class="tbl-link">{{ r.student }}</a></td>
+                <td>{{ r.quiz_name }}</td>
+                <td class="{% if r.accuracy >= 80 %}accuracy-good{% elif r.accuracy >= 50 %}accuracy-mid{% else %}accuracy-low{% endif %}">{{ r.accuracy }}%</td>
+                <td>{{ r.avg_time }}s</td>
+                <td>{{ r.date }}</td>
+                <td><a href="{{ url_for('results', result_id=r.result_id) }}" class="tbl-link">View →</a></td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="no-data">No quiz attempts yet.</p>
+        {% endif %}
+    </div>
 </body>
 </html>

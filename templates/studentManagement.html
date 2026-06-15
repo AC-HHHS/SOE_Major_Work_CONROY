@@ -3,43 +3,147 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" type = "text/css" href="{{ url_for('static', filename='main.css') }}">
-    <title>Document</title>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='main.css') }}">
+    <title>Student Management</title>
+    <style>
+        .divider { border: none; border-top: 2px solid #d4c9b0; margin: 0.5rem 1.5rem 1.5rem; }
+        .page-wrap { padding: 1.5rem; }
+
+        /* Stats bar */
+        .stats-bar {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 1rem; margin-bottom: 2rem;
+        }
+        .stat-card {
+            background: white; border: 2px solid #d4c9b0; border-radius: 10px;
+            padding: 1rem; text-align: center;
+        }
+        .stat-value { font-family: Cinzel Decorative; font-size: 1.6rem; color: #810000; line-height: 1; margin-bottom: 0.3rem; }
+        .stat-label { font-size: 0.78rem; color: #666; }
+
+        /* Table */
+        .data-table {
+            width: 100%; border-collapse: collapse; font-size: 0.88rem;
+            background: white; border-radius: 10px; overflow: hidden; border: 2px solid #d4c9b0;
+        }
+        .data-table th {
+            background: #1b1717; color: #eeebdd; font-family: Metamorphous;
+            padding: 0.6rem 1rem; text-align: left; font-weight: normal;
+        }
+        .data-table td { padding: 0.6rem 1rem; border-bottom: 1px solid #eeebdd; }
+        .data-table tr:last-child td { border-bottom: none; }
+        .data-table tr:hover td { background: #faf8f3; }
+
+        .admin-badge {
+            display: inline-block; background: #1b1717; color: #eeebdd;
+            font-size: 0.72rem; padding: 0.15rem 0.55rem; border-radius: 10px;
+            font-family: Metamorphous;
+        }
+        .level-badge {
+            display: inline-block; background: linear-gradient(to right, #FF3333, #810000);
+            color: #eeebdd; font-size: 0.72rem; padding: 0.15rem 0.55rem;
+            border-radius: 10px; font-family: Metamorphous;
+        }
+        .tbl-link { color: #810000; font-weight: bold; text-decoration: underline; padding: 0; }
+        .tbl-link:hover { color: #FF3333; }
+        .make-admin-btn {
+            background: none; border: 1px solid #810000; color: #810000;
+            font-family: Metamorphous; font-size: 0.78rem; padding: 0.25rem 0.6rem;
+            border-radius: 6px; cursor: pointer;
+        }
+        .make-admin-btn:hover { background: #810000; color: #eeebdd; }
+
+        /* Search */
+        .search-wrap { margin-bottom: 1rem; }
+        .search-wrap input {
+            width: 100%; max-width: 360px; padding: 0.55rem 0.9rem;
+            border: 2px solid #810000; border-radius: 8px; font-family: Metamorphous;
+            font-size: 0.9rem; background: white; box-sizing: border-box;
+        }
+    </style>
 </head>
 <body>
     <div class="banner">
-            <div class="banner-content">
-                <a href="{{ url_for('logout') }}">Log Out</a>   
-                <a href="/admin"> Go Back</a>
+        <div class="banner-content">
+            <a href="{{ url_for('logout') }}">Log Out</a>
+            <a href="{{ url_for('teacher_home') }}">Back to Dashboard</a>
+        </div>
+    </div>
+
+    <div class="page-wrap">
+        <h1>Student Management</h1>
+
+        <!-- Class stats -->
+        <div class="stats-bar">
+            <div class="stat-card">
+                <div class="stat-value">{{ total_students }}</div>
+                <div class="stat-label">Total Students</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">{{ class_avg }}%</div>
+                <div class="stat-label">Class Avg Accuracy</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" style="font-size:1rem;padding-top:0.4rem;">{{ top_quiz_name or '—' }}</div>
+                <div class="stat-label">Most Attempted Quiz</div>
             </div>
         </div>
-    <main>
 
-    <h2>User Management</h2>
-    <table>
-        <thead>
-            <tr>
-                <th>Name</th>
-                <th>Email</th>
-                <th>Admin?</th>
-                <th>Action</th>
-            </tr>
-        </thead>
-    <tbody>
-            {% for u in users %}
+        <hr class="divider">
+
+        <h2>All Students</h2>
+
+        <div class="search-wrap">
+            <input type="text" id="searchInput" placeholder="Search by name or email..."
+                   onkeyup="filterTable()">
+        </div>
+
+        <table class="data-table" id="studentTable">
+            <thead>
                 <tr>
-                    <td>{{ u[0] }} {{ u[1] }}</td>
-                    <td>{{ u[2] }}</td>
-                    <td>{{ "Yes" if u[3] == 1 else "No" }}</td>
-                    <td>
-                        {% if u[3] == 0 %}
-                            <a href="{{ url_for('make_admin', email=u[2]) }}">Make Admin</a>
-                        {% endif %}
-                    </td>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Level</th>
+                    <th>Role</th>
+                    <th>Actions</th>
                 </tr>
+            </thead>
+            <tbody>
+            {% for u in users %}
+            <tr>
+                <td>{{ u[0] }} {{ u[1] }}</td>
+                <td>{{ u[2] }}</td>
+                <td><span class="level-badge">{{ u[5] if u[5] else 1 }}</span></td>
+                <td>
+                    {% if u[3] == 1 %}
+                    <span class="admin-badge">Admin</span>
+                    {% else %}
+                    Student
+                    {% endif %}
+                </td>
+                <td style="display:flex;gap:0.5rem;align-items:center;">
+                    <a href="{{ url_for('student_detail', user_id=u[4]) }}" class="tbl-link">View Results →</a>
+                    {% if u[3] == 0 %}
+                    <a href="{{ url_for('make_admin', email=u[2]) }}">
+                        <button class="make-admin-btn">Make Admin</button>
+                    </a>
+                    {% endif %}
+                </td>
+            </tr>
             {% endfor %}
-        </tbody>
-    </table>
-    </main>
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        function filterTable() {
+            const input = document.getElementById('searchInput').value.toLowerCase();
+            const rows = document.querySelectorAll('#studentTable tbody tr');
+            rows.forEach(row => {
+                const text = row.textContent.toLowerCase();
+                row.style.display = text.includes(input) ? '' : 'none';
+            });
+        }
+    </script>
 </body>
 </html>

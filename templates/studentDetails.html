@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='main.css') }}">
+    <title>{{ student[0] }} {{ student[1] }} — Results</title>
+    <style>
+        .divider { border: none; border-top: 2px solid #d4c9b0; margin: 0.5rem 1.5rem 1.5rem; }
+        .page-wrap { padding: 1.5rem; }
+        .student-header { margin-bottom: 1.5rem; }
+        .student-header h1 { margin-bottom: 0.2rem; }
+        .student-sub { color: #810000; font-family: Metamorphous; font-size: 0.9rem; }
+        .level-pill {
+            display: inline-block; background: linear-gradient(to right, #FF3333, #810000);
+            color: #eeebdd; font-family: Cinzel Decorative; font-size: 0.75rem;
+            padding: 0.25rem 0.9rem; border-radius: 20px; letter-spacing: 0.05em;
+        }
+
+        /* Stats */
+        .stats-bar {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem; margin-bottom: 2rem;
+        }
+        .stat-card {
+            background: white; border: 2px solid #d4c9b0; border-radius: 10px;
+            padding: 1rem; text-align: center;
+        }
+        .stat-value { font-family: Cinzel Decorative; font-size: 1.5rem; color: #810000; line-height: 1; margin-bottom: 0.3rem; }
+        .stat-label { font-size: 0.78rem; color: #666; }
+
+        /* Table */
+        .data-table {
+            width: 100%; border-collapse: collapse; font-size: 0.88rem;
+            background: white; border-radius: 10px; overflow: hidden; border: 2px solid #d4c9b0;
+        }
+        .data-table th {
+            background: #1b1717; color: #eeebdd; font-family: Metamorphous;
+            padding: 0.6rem 1rem; text-align: left; font-weight: normal;
+        }
+        .data-table td { padding: 0.6rem 1rem; border-bottom: 1px solid #eeebdd; }
+        .data-table tr:last-child td { border-bottom: none; }
+        .data-table tr:hover td { background: #faf8f3; }
+        .accuracy-good { color: #28a745; font-weight: bold; }
+        .accuracy-mid  { color: #e67e22; font-weight: bold; }
+        .accuracy-low  { color: #e74c3c; font-weight: bold; }
+        .tbl-link { color: #810000; font-weight: bold; text-decoration: underline; padding: 0; }
+        .tbl-link:hover { color: #FF3333; }
+        .no-data { text-align: center; color: #888; font-style: italic; padding: 2rem; }
+    </style>
+</head>
+<body>
+    <div class="banner">
+        <div class="banner-content">
+            <a href="{{ url_for('logout') }}">Log Out</a>
+            <a href="{{ url_for('user_management') }}">Back to Students</a>
+        </div>
+    </div>
+
+    <div class="page-wrap">
+        <div class="student-header">
+            <h1>{{ student[0] }} {{ student[1] }}</h1>
+            <p class="student-sub">{{ student[2] }}</p>
+            <span class="level-pill">Level {{ student[3] if student[3] else 1 }}</span>
+        </div>
+
+        <!-- Stats -->
+        <div class="stats-bar">
+            <div class="stat-card">
+                <div class="stat-value">{{ total_attempts }}</div>
+                <div class="stat-label">Total Attempts</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">{{ avg_accuracy or '—' }}%</div>
+                <div class="stat-label">Avg Accuracy</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">{{ avg_time or '—' }}s</div>
+                <div class="stat-label">Avg Time / Question</div>
+            </div>
+        </div>
+
+        <hr class="divider">
+
+        <h2>Attempt History</h2>
+
+        {% if history %}
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Quiz</th><th>Score</th><th>Accuracy</th>
+                    <th>Avg Time / Q</th><th>Date</th><th></th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for h in history %}
+            <tr>
+                <td>{{ h.quiz_name }}</td>
+                <td>{{ h.score }}</td>
+                <td class="{% if h.accuracy >= 80 %}accuracy-good{% elif h.accuracy >= 50 %}accuracy-mid{% else %}accuracy-low{% endif %}">{{ h.accuracy }}%</td>
+                <td>{{ h.avg_time }}s</td>
+                <td>{{ h.date }}</td>
+                <td><a href="{{ url_for('results', result_id=h.result_id) }}" class="tbl-link">View →</a></td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="no-data">This student hasn't attempted any quizzes yet.</p>
+        {% endif %}
+    </div>
+</body>
+</html>

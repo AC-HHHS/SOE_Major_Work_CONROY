@@ -3,28 +3,122 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" type = "text/css" href="{{ url_for('static', filename='main.css') }}">
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='main.css') }}">
     <title>Dashboard</title>
+    <style>
+        .welcome-section { text-align: center; padding: 2rem 1rem 1rem; }
+        .welcome-sub { color: #810000; font-family: Metamorphous; font-size: 0.95rem; margin-bottom: 0.5rem; }
+        .level-pill {
+            display: inline-block;
+            background: linear-gradient(to right, #FF3333, #810000);
+            color: #eeebdd; font-family: Cinzel Decorative;
+            font-size: 0.78rem; padding: 0.3rem 1rem;
+            border-radius: 20px; letter-spacing: 0.05em;
+        }
+        .topics-wrap { padding: 0 1.5rem 2rem; }
+        .topic-group { margin-bottom: 2rem; }
+        .topic-heading {
+            font-family: Cinzel Decorative; font-size: 0.9rem; color: #810000;
+            text-transform: uppercase; letter-spacing: 0.08em;
+            border-bottom: 2px solid #810000; padding-bottom: 0.4rem;
+            margin-bottom: 1rem; text-align: left;
+        }
+        .quiz-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 1rem; }
+        .quiz-card {
+            background: white; border: 2px solid #d4c9b0; border-radius: 10px;
+            padding: 1.2rem 1.1rem; text-decoration: none; color: #1b1717;
+            transition: border-color 0.2s, box-shadow 0.2s, transform 0.15s;
+            display: flex; flex-direction: column; gap: 0.4rem;
+        }
+        .quiz-card:hover {
+            border-color: #810000; box-shadow: 0 4px 16px rgba(129,0,0,0.12);
+            transform: translateY(-2px); color: #1b1717;
+        }
+        .quiz-card-name { font-family: Cinzel Decorative; font-size: 0.88rem; color: #810000; line-height: 1.4; }
+        .quiz-card-topic { font-size: 0.8rem; color: #666; }
+        .quiz-card-arrow { margin-top: 0.6rem; font-size: 0.82rem; color: #810000; font-weight: bold; }
+        .recent-section { padding: 0 1.5rem 2rem; }
+        .recent-section h2 { text-align: left; font-size: 1rem; }
+        .recent-table {
+            width: 100%; border-collapse: collapse; font-size: 0.88rem;
+            background: white; border-radius: 10px; overflow: hidden; border: 2px solid #d4c9b0;
+        }
+        .recent-table th {
+            background: #1b1717; color: #eeebdd; font-family: Metamorphous;
+            padding: 0.6rem 1rem; text-align: left; font-weight: normal;
+        }
+        .recent-table td { padding: 0.55rem 1rem; border-bottom: 1px solid #eeebdd; color: #1b1717; }
+        .recent-table tr:last-child td { border-bottom: none; }
+        .recent-table tr:hover td { background: #faf8f3; }
+        .accuracy-good { color: #28a745; font-weight: bold; }
+        .accuracy-mid  { color: #e67e22; font-weight: bold; }
+        .accuracy-low  { color: #e74c3c; font-weight: bold; }
+        .view-link { color: #810000; font-weight: bold; text-decoration: underline; padding: 0; }
+        .view-link:hover { color: #FF3333; }
+        .no-quizzes { text-align: center; color: #888; font-style: italic; padding: 2rem; }
+        .divider { border: none; border-top: 2px solid #d4c9b0; margin: 0.5rem 1.5rem 1.5rem; }
+    </style>
 </head>
 <body>
     <div class="banner">
-            <div class="banner-content">
-                <a href="{{ url_for('logout') }}">Log Out</a>   
-                <a href="/admin"> Go Back</a>
+        <div class="banner-content">
+            <a href="{{ url_for('logout') }}">Log Out</a>
+        </div>
+    </div>
+
+    <div class="welcome-section">
+        <h1>Welcome, {{ first_name }}.</h1>
+        <p class="welcome-sub">{{ email }}</p>
+        <span class="level-pill">Level {{ user_level }}</span>
+    </div>
+
+    <hr class="divider">
+
+    {% if topics %}
+    <div class="topics-wrap">
+        <h2>Available Quizzes</h2>
+        {% for topic, quizzes in topics.items() %}
+        <div class="topic-group">
+            <div class="topic-heading">{{ topic }}</div>
+            <div class="quiz-grid">
+                {% for quiz in quizzes %}
+                <a href="{{ url_for('select_level', quiz_id=quiz[0]) }}" class="quiz-card">
+                    <div class="quiz-card-name">{{ quiz[1] }}</div>
+                    <div class="quiz-card-topic">{{ quiz[2] }}</div>
+                    <div class="quiz-card-arrow">Choose level →</div>
+                </a>
+                {% endfor %}
             </div>
         </div>
-    <main>
-        
-    <h1>Welcome, {{ first_name }} {{ last_name }}</h1>
-    <h2> What would you like to do? </h2>
-    <img class = "showUser">
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="no-quizzes"><p>No quizzes available yet. Check back soon.</p></div>
+    {% endif %}
 
-    <main>
-    <form method="post" action="/firstquiz">
-        <h1> First Quiz</h1>
-        <button type="submit" value="Continue">Continue</button>
-    </form>
-    
-    </main>
+    {% if recent %}
+    <hr class="divider">
+    <div class="recent-section">
+        <h2>Recent Results</h2>
+        <table class="recent-table">
+            <thead>
+                <tr>
+                    <th>Quiz</th><th>Accuracy</th><th>Avg Time / Q</th><th>Date</th><th></th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for r in recent %}
+            <tr>
+                <td>{{ r.quiz_name }}</td>
+                <td class="{% if r.accuracy >= 80 %}accuracy-good{% elif r.accuracy >= 50 %}accuracy-mid{% else %}accuracy-low{% endif %}">{{ r.accuracy }}%</td>
+                <td>{{ r.avg_time }}s</td>
+                <td>{{ r.date }}</td>
+                <td><a href="{{ url_for('results', result_id=r.result_id) }}" class="view-link">View →</a></td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
 </body>
 </html>

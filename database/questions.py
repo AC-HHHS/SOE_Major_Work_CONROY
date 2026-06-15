@@ -31,7 +31,7 @@ cursor.execute(cmd4)
 cursor.execute("INSERT INTO quizzes (name, topic, level) VALUES (?, ?, ?)", ('World Capitals Quiz', 'Geography', 1))
 
 # This is the test question
-cursor.execute("INSERT INTO questions (topic, level, question_text, correct_answer, option_a, option_b, option_c, option_d, quiz_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", 
-               ('Geography', 1, 'What is the capital of France?', 'Paris', 'Berlin', 'Madrid', 'Paris', 'Rome', 1))
+cursor.execute("INSERT INTO questions (topic, level, question_text, correct_answer, option_a, option_b, option_c, option_d, quiz_id, question_type, marks) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", 
+               ('Geography', 1, 'What is the capital of France?', 'A', 'Paris', 'Berlin', 'Madrid', 'Rome', 1, 'mc', 1))
 
 connection.commit() # adds new record :)
