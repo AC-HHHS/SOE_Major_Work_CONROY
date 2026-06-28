@@ -562,17 +562,36 @@ def submit_quiz():
 def results(result_id):
     if 'user_id' not in session:
         return redirect(url_for('login'))
-    
+
     connection = sqlite3.connect('database/LoginData.db')
     cursor = connection.cursor()
 
-    result = cursor.execute('SELECT score, accuracy, avg_time, wrong_questions, date FROM results WHERE id = ? AND user_id = ?', (result_id, session['user_id'])).fetchone()
+    # Admins can view any result, students can only view their own
+    if session.get('is_admin'):
+        result = cursor.execute(
+            'SELECT score, accuracy, avg_time, wrong_questions, date FROM results WHERE id=?',
+            (result_id,)
+        ).fetchone()
+    else:
+        result = cursor.execute(
+            'SELECT score, accuracy, avg_time, wrong_questions, date FROM results WHERE id=? AND user_id=?',
+            (result_id, session['user_id'])
+        ).fetchone()
+
     connection.close()
 
-    wrong_questions = json.loads(result[3])
+    # Result not being found
+    if not result:
+        return "Result not found.", 404
 
-    return render_template('results.html', score=result[0], accuracy=result[1], avg_time=result[2], wrong_questions=wrong_questions, date=result[3])
+    wrong_questions = json.loads(result[3])  # result[3] is wrong_questions JSON
 
+    return render_template('results.html',
+        score=result[0],
+        accuracy=result[1],
+        avg_time=result[2],
+        wrong_questions=wrong_questions,
+        date=result[4]) 
 
 @app.route('/student/<int:user_id>')
 def student_detail(user_id):
@@ -615,8 +634,94 @@ def student_detail(user_id):
         student=student, user_id=user_id, history=history,
         total_attempts=stats[0], avg_accuracy=stats[1], avg_time=stats[2])
 
+@app.route('/manage_quizzes')
+def manage_quizzes():
+    if not session.get('is_admin'):
+        return redirect(url_for('login'))
+    
+    connection = sqlite3.connect('database/Questions.db')
+    cursor = connection.cursor()
+
+    quizzes = cursor.execute('''SELECT qz.id, qz.name, qz.topic, qz.level, COUNT(q.id) as question_count FROM quizzes qz LEFT JOIN questions q ON q.quiz_id = qz.id GROUP BY qz.id ORDER BY qz.name''').fetchall()
+    connection.close()
+
+    return render_template('manageQuizzes.html', quizzes=quizzes)
+
+@app.route('/delete_quiz/<int:quiz_id>', methods=['POST'])
+def delete_quiz(quiz_id):
+    if not session.get('is_admin'):
+        return redirect(url_for('login'))
+
+    connection = sqlite3.connect('database/Questions.db')
+    cursor = connection.cursor()
+    # Delete all questions in the quiz first, then the quiz itself
+    cursor.execute('DELETE FROM questions WHERE quiz_id=?', (quiz_id,))
+    cursor.execute('DELETE FROM quizzes WHERE id=?', (quiz_id,))
+    connection.commit()
+    connection.close()
+
+    return redirect(url_for('manage_quizzes'))
 
 
+@app.route('/quiz_detail/<int:quiz_id>')
+def quiz_detail(quiz_id):
+    if not session.get('is_admin'):
+        return redirect(url_for('login'))
+
+    connection = sqlite3.connect('database/Questions.db')
+    cursor = connection.cursor()
+
+    quiz = cursor.execute('SELECT * FROM quizzes WHERE id=?', (quiz_id,)).fetchone()
+    questions = cursor.execute('''
+        SELECT id, question_text, option_a, option_b, option_c, option_d, correct_answer, level, question_type, marks
+        FROM questions WHERE quiz_id=?
+        ORDER BY level, id
+    ''', (quiz_id,)).fetchall()
+    all_quizzes = cursor.execute('SELECT id, name FROM quizzes').fetchall()
+    connection.close()
+
+    return render_template('quizDisplay.html', quiz=quiz,
+                           questions=questions, all_quizzes=all_quizzes)
+
+
+@app.route('/edit_quiz/<int:quiz_id>', methods=['GET', 'POST'])
+def edit_quiz(quiz_id):
+    if not session.get('is_admin'):
+        return redirect(url_for('login'))
+
+    connection = sqlite3.connect('database/Questions.db')
+    cursor = connection.cursor()
+
+    if request.method == 'POST':
+        name = request.form.get('name')
+        topic = request.form.get('topic')
+        level = request.form.get('level')
+        cursor.execute('UPDATE quizzes SET name=?, topic=?, level=? WHERE id=?',
+                       (name, topic, level, quiz_id))
+        connection.commit()
+        connection.close()
+        return redirect(url_for('quiz_detail', quiz_id=quiz_id))
+
+    quiz = cursor.execute('SELECT * FROM quizzes WHERE id=?', (quiz_id,)).fetchone()
+    connection.close()
+    return render_template('editQuiz.html', quiz=quiz)
+
+
+@app.route('/move_question/<int:question_id>', methods=['POST'])
+def move_question(question_id):
+    if not session.get('is_admin'):
+        return redirect(url_for('login'))
+
+    new_quiz_id = request.form.get('new_quiz_id')
+    original_quiz_id = request.form.get('original_quiz_id')
+
+    connection = sqlite3.connect('database/Questions.db')
+    cursor = connection.cursor()
+    cursor.execute('UPDATE questions SET quiz_id=? WHERE id=?', (new_quiz_id, question_id))
+    connection.commit()
+    connection.close()
+
+    return redirect(url_for('quiz_detail', quiz_id=original_quiz_id))
 
 if __name__ == '__main__':
     app.run(debug=True) 

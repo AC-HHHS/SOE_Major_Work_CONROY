@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='main.css') }}">
+    <title>{{ quiz[1] }}</title>
+    <style>
+        .quiz-header {
+            background: white; border: 2px solid #e0e0e0;
+            border-radius: 10px; padding: 1.5rem; margin-bottom: 1.5rem;
+            display: flex; justify-content: space-between; align-items: flex-start;
+        }
+        .quiz-header h1 { margin: 0 0 0.3rem 0; }
+        .quiz-meta { color: #666; font-size: 0.9rem; }
+        .level-badge {
+            display: inline-block; padding: 0.15rem 0.55rem;
+            border-radius: 12px; font-size: 0.78rem; font-weight: 700;
+            background: #f0f5ff; color: #2c7be5; margin-top: 0.4rem;
+        }
+        .header-actions { display: flex; gap: 0.5rem; flex-shrink: 0; }
+
+        .question-card {
+            background: white; border: 2px solid #e0e0e0;
+            border-radius: 10px; padding: 1.2rem; margin-bottom: 1rem;
+        }
+        .question-card:hover { border-color: #2c7be5; }
+        .q-header {
+            display: flex; justify-content: space-between;
+            align-items: flex-start; margin-bottom: 0.8rem;
+        }
+        .q-text { font-weight: 600; font-size: 0.95rem; flex: 1; margin-right: 1rem; }
+        .q-badges { display: flex; gap: 0.4rem; flex-shrink: 0; }
+        .badge {
+            display: inline-block; padding: 0.15rem 0.55rem;
+            border-radius: 12px; font-size: 0.75rem; font-weight: 700;
+        }
+        .badge-level { background: #f0f5ff; color: #2c7be5; }
+        .badge-type { background: #f0fff4; color: #28a745; }
+        .badge-marks { background: #fff8f0; color: #e67e22; }
+
+        .options-grid {
+            display: grid; grid-template-columns: 1fr 1fr;
+            gap: 0.4rem; margin-bottom: 0.8rem; font-size: 0.88rem;
+        }
+        .option { padding: 0.4rem 0.7rem; background: #f8f9fa;
+                  border-radius: 6px; }
+        .option.correct { background: #f0fff4; color: #28a745;
+                          font-weight: 700; border: 1px solid #28a745; }
+
+        .q-actions {
+            display: flex; gap: 0.5rem; align-items: center;
+            border-top: 1px solid #f0f0f0; padding-top: 0.8rem; margin-top: 0.8rem;
+            flex-wrap: wrap;
+        }
+        .move-form { display: flex; gap: 0.4rem; align-items: center; margin-left: auto; }
+        .move-form select {
+            padding: 0.35rem 0.6rem; border: 2px solid #e0e0e0;
+            border-radius: 6px; font-size: 0.83rem;
+        }
+        .move-form select:focus { border-color: #2c7be5; outline: none; }
+
+        .btn { padding: 0.4rem 0.9rem; border-radius: 7px; border: none;
+               font-size: 0.83rem; font-weight: 600; cursor: pointer;
+               text-decoration: none; display: inline-block; }
+        .btn-primary { background: #2c7be5; color: white; }
+        .btn-primary:hover { background: #1a6bd4; }
+        .btn-secondary { background: #f0f5ff; color: #2c7be5;
+                         border: 1px solid #2c7be5; }
+        .btn-secondary:hover { background: #dce8ff; }
+        .btn-danger { background: #fff0f0; color: #e74c3c;
+                      border: 1px solid #e74c3c; }
+        .btn-danger:hover { background: #ffe0e0; }
+        .btn-warning { background: #fff8f0; color: #e67e22;
+                       border: 1px solid #e67e22; }
+        .btn-warning:hover { background: #fff0e0; }
+
+        .no-questions { text-align: center; color: #888;
+                        font-style: italic; padding: 3rem; }
+        .section-title { font-size: 1rem; font-weight: 700;
+                         color: #555; margin: 1.5rem 0 0.8rem; }
+    </style>
+</head>
+<body>
+    <div class="banner">
+        <div class="banner-content">
+            <a href="{{ url_for('logout') }}">Log Out</a>
+            <a href="{{ url_for('manage_quizzes') }}">Back to Quizzes</a>
+        </div>
+    </div>
+    <main>
+        <!-- Quiz Header -->
+        <div class="quiz-header">
+            <div>
+                <h1>{{ quiz[1] }}</h1>
+                <p class="quiz-meta">{{ quiz[2] }}</p>
+                <span class="level-badge">Level {{ quiz[3] }}</span>
+            </div>
+            <div class="header-actions">
+                <a href="/edit_quiz/{{ quiz[0] }}" class="btn btn-warning">Edit Quiz</a>
+                <a href="{{ url_for('add_question_page') }}" class="btn btn-primary">+ Add Question</a>
+            </div>
+        </div>
+
+        <!-- Questions -->
+        <p class="section-title">{{ questions|length }} Question{{ 's' if questions|length != 1 else '' }}</p>
+
+        {% if questions %}
+            {% for q in questions %}
+            <div class="question-card">
+                <div class="q-header">
+                    <p class="q-text">{{ q[1] }}</p>
+                    <div class="q-badges">
+                        <span class="badge badge-level">Level {{ q[7] }}</span>
+                        <span class="badge badge-type">{{ q[8] if q[8] else 'mc' }}</span>
+                        <span class="badge badge-marks">{{ q[9] if q[9] else 1 }} mark{{ 's' if (q[9] or 1) != 1 else '' }}</span>
+                    </div>
+                </div>
+
+                <!-- Options (only show for MC questions) -->
+                {% if q[2] or q[3] or q[4] or q[5] %}
+                <div class="options-grid">
+                    {% for letter, text in [('A', q[2]), ('B', q[3]), ('C', q[4]), ('D', q[5])] %}
+                    {% if text %}
+                    <div class="option {% if q[6] == letter %}correct{% endif %}">
+                        <strong>{{ letter }}.</strong> {{ text }}
+                        {% if q[6] == letter %} ✓{% endif %}
+                    </div>
+                    {% endif %}
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p style="color:#888;font-size:0.88rem;font-style:italic;">
+                    Written response question
+                </p>
+                {% endif %}
+
+                <!-- Actions -->
+                <div class="q-actions">
+                    <a href="/edit_question/{{ q[0] }}" class="btn btn-secondary">Edit</a>
+                    <form method="POST" action="/delete_question/{{ q[0] }}"
+                          onsubmit="return confirm('Delete this question?')">
+                        <button type="submit" class="btn btn-danger">Delete</button>
+                    </form>
+
+                    <!-- Move to different quiz -->
+                    <form method="POST" action="/move_question/{{ q[0] }}"
+                          class="move-form">
+                        <input type="hidden" name="original_quiz_id" value="{{ quiz[0] }}">
+                        <select name="new_quiz_id" required>
+                            <option value="" disabled selected>Move to...</option>
+                            {% for other_quiz in all_quizzes %}
+                            {% if other_quiz[0] != quiz[0] %}
+                            <option value="{{ other_quiz[0] }}">{{ other_quiz[1] }}</option>
+                            {% endif %}
+                            {% endfor %}
+                        </select>
+                        <button type="submit" class="btn btn-warning">Move</button>
+                    </form>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+        <p class="no-questions">No questions in this quiz yet.
+            <a href="{{ url_for('add_question_page') }}">Add one now</a>
+        </p>
+        {% endif %}
+    </main>
+</body>
+</html>

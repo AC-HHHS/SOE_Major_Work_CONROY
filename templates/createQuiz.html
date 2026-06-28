@@ -147,6 +147,14 @@
             </form>
         </div>
 
+        <div class="actions-wrap">
+        <a href="{{ url_for('manage_quizzes') }}" class="action-card">
+            <span class="action-icon">📝</span>
+            <span class="action-title">Manage Quizzes</span>
+            <span class="action-desc">Add, edit, delete quizzes.</span>
+        </a>
+        </div>
+
         <!-- All Questions Table -->
         <div class="section">
             <h2>All Questions ({{ questions|length }})</h2>
