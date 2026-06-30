@@ -501,60 +501,85 @@ def delete_question(question_id):
 def submit_quiz():
     if 'user_id' not in session:
         return redirect(url_for('login'))
-    
+
     data = request.get_json()
     answers = data['answers']
     quiz_id = data['quiz_id']
 
     questions_conn = sqlite3.connect('database/Questions.db')
-    cursor = questions_conn.cursor()
+    q_cursor = questions_conn.cursor()
 
-    correct_answers = cursor.execute('SELECT id, question_text, correct_answer FROM questions WHERE quiz_id = ?', (quiz_id,)).fetchall()
+    questions = q_cursor.execute('''
+        SELECT id, question_text, correct_answer, question_type, marks
+        FROM questions WHERE quiz_id=?
+    ''', (quiz_id,)).fetchall()
     questions_conn.close()
 
-    total = len(correct_answers)
-    correct_count = 0
+    total_marks = 0
+    earned_marks = 0
     total_time = 0
     wrong_questions = []
+    written_answers = []
+    has_written = False
 
-    for question in correct_answers:
+    for question in questions:
         q_id = str(question[0])
         q_text = question[1]
         correct = question[2]
+        q_type = question[3] if question[3] else 'mc'
+        marks = question[4] if question[4] else 1
 
-        if q_id in answers:
-            user_answer = answers[q_id]['answer']
-            time_taken = answers[q_id]['time']
-            total_time += time_taken
+        if q_id not in answers:
+            continue
 
+        user_answer = answers[q_id]['answer']
+        time_taken = answers[q_id]['time']
+        total_time += time_taken
+        total_marks += marks
+
+        if q_type == 'mc':
             if user_answer == correct:
-                correct_count += 1
+                earned_marks += marks
             else:
-                wrong_questions.append({'question': q_text, 'correct_answer': correct, 'your_answer': user_answer})
+                wrong_questions.append({
+                    'question': q_text,
+                    'your_answer': user_answer,
+                    'correct_answer': correct
+                })
+        else:
+            has_written = True
+            written_answers.append({
+                'question_id': q_id,
+                'question_text': q_text,
+                'question_type': q_type,
+                'answer': user_answer,
+                'max_marks': marks
+            })
 
-    accuracy = round((correct_count / total) * 100, 1)
-    avg_time = round(total_time / total, 1)
+    answered = len(answers)
+    accuracy = round((earned_marks / total_marks) * 100, 1) if total_marks > 0 else 0
+    avg_time = round(total_time / answered, 1) if answered > 0 else 0
+
+    
+    marking_complete = 0 if has_written else 1
 
     login_conn = sqlite3.connect('database/LoginData.db')
     login_cursor = login_conn.cursor()
 
-    login_cursor.execute("""CREATE TABLE IF NOT EXISTS results (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER,
-        quiz_id INTEGER,
-        score REAL,
-        accuracy REAL,
-        avg_time REAL,
-        wrong_questions TEXT, 
-        date TEXT
-    )""")
+    login_cursor.execute('''INSERT INTO results 
+        (user_id, quiz_id, score, accuracy, avg_time, wrong_questions,
+         written_answers, written_marks, marking_complete, date)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+        (session['user_id'], quiz_id, earned_marks, accuracy, avg_time,
+         json.dumps(wrong_questions), json.dumps(written_answers),
+         json.dumps([]),  # empty until teacher marks
+         marking_complete, str(date.today())))
 
-    login_cursor.execute("INSERT INTO results (user_id, quiz_id, score, accuracy, avg_time, wrong_questions, date) VALUES (?, ?, ?, ?, ?, ?, ?)",
-        (session['user_id'], quiz_id, correct_count, accuracy, avg_time, json.dumps(wrong_questions), str(date.today())))
     login_conn.commit()
-
     result_id = login_cursor.lastrowid
     login_conn.close()
+
+    return json.dumps({'result_id': result_id})
 
     return json.dumps({'result_id': result_id})
 
@@ -566,32 +591,53 @@ def results(result_id):
     connection = sqlite3.connect('database/LoginData.db')
     cursor = connection.cursor()
 
-    # Admins can view any result, students can only view their own
     if session.get('is_admin'):
         result = cursor.execute(
-            'SELECT score, accuracy, avg_time, wrong_questions, date FROM results WHERE id=?',
+            '''SELECT score, accuracy, avg_time, wrong_questions, 
+               date, written_answers, written_marks, marking_complete 
+               FROM results WHERE id=?''',
             (result_id,)
         ).fetchone()
     else:
         result = cursor.execute(
-            'SELECT score, accuracy, avg_time, wrong_questions, date FROM results WHERE id=? AND user_id=?',
+            '''SELECT score, accuracy, avg_time, wrong_questions,
+               date, written_answers, written_marks, marking_complete
+               FROM results WHERE id=? AND user_id=?''',
             (result_id, session['user_id'])
         ).fetchone()
 
     connection.close()
 
-    # Result not being found
     if not result:
         return "Result not found.", 404
 
-    wrong_questions = json.loads(result[3])  # result[3] is wrong_questions JSON
+    try:
+        wrong_questions = json.loads(result[3]) if result[3] else []
+    except:
+        wrong_questions = []
+
+    try:
+        written_answers = json.loads(result[5]) if result[5] else []
+    except:
+        written_answers = []
+
+    try:
+        written_marks = json.loads(result[6]) if result[6] else []
+    except:
+        written_marks = []
+
+    marks_by_id = {str(m['question_id']): m for m in written_marks}
 
     return render_template('results.html',
         score=result[0],
         accuracy=result[1],
         avg_time=result[2],
         wrong_questions=wrong_questions,
-        date=result[4]) 
+        date=result[4],
+        written_answers=written_answers,
+        marks_by_id=marks_by_id,
+        marking_complete=result[7],
+        result_id=result_id)
 
 @app.route('/student/<int:user_id>')
 def student_detail(user_id):
@@ -722,6 +768,94 @@ def move_question(question_id):
     connection.close()
 
     return redirect(url_for('quiz_detail', quiz_id=original_quiz_id))
+
+@app.route('/mark_answers/<int:result_id>', methods=['GET', 'POST'])
+def mark_answers(result_id):
+    if not session.get('is_admin'):
+        return redirect(url_for('login'))
+
+    login_conn = sqlite3.connect('database/LoginData.db')
+    login_cursor = login_conn.cursor()
+
+    if request.method == 'POST':
+        written_marks = []
+        total_written_marks = 0
+        earned_written_marks = 0
+
+        # Get existing result
+        result = login_cursor.execute(
+            'SELECT written_answers, score, accuracy FROM results WHERE id=?',
+            (result_id,)
+        ).fetchone()
+
+        written_answers = json.loads(result[0])
+
+        for wa in written_answers:
+            q_id = wa['question_id']
+            mark = int(request.form.get(f'mark_{q_id}', 0))
+            feedback = request.form.get(f'feedback_{q_id}', '')
+            max_marks = wa['max_marks']
+
+            written_marks.append({
+                'question_id': q_id,
+                'question_text': wa['question_text'],
+                'answer': wa['answer'],
+                'mark': mark,
+                'max_marks': max_marks,
+                'feedback': feedback
+            })
+
+            total_written_marks += max_marks
+            earned_written_marks += mark
+
+        # Recalculate overall score and accuracy including written marks
+        old_score = result[1] or 0
+        new_score = old_score + earned_written_marks
+
+        # Get total possible marks for the quiz
+        q_conn = sqlite3.connect('database/Questions.db')
+        q_cursor = q_conn.cursor()
+        quiz_id = login_cursor.execute(
+            'SELECT quiz_id FROM results WHERE id=?', (result_id,)
+        ).fetchone()[0]
+        total_possible = q_cursor.execute(
+            'SELECT SUM(marks) FROM questions WHERE quiz_id=?', (quiz_id,)
+        ).fetchone()[0] or 1
+        q_conn.close()
+
+        new_accuracy = round((new_score / total_possible) * 100, 1)
+
+        login_cursor.execute('''UPDATE results SET
+            written_marks=?, marking_complete=1,
+            score=?, accuracy=?
+            WHERE id=?''',
+            (json.dumps(written_marks), new_score, new_accuracy, result_id))
+        login_conn.commit()
+        login_conn.close()
+
+        return redirect(url_for('results', result_id=result_id))
+
+    # GET — load the result for marking
+    result = login_cursor.execute('''
+        SELECT r.id, r.written_answers, r.written_marks, r.marking_complete,
+               u.first_name, u.last_name, q.name
+        FROM results r
+        JOIN users u ON r.user_id = u.id
+        JOIN quizzes q ON r.quiz_id = q.id
+        WHERE r.id=?
+    ''', (result_id,)).fetchone()
+
+    # Join quizzes from Questions.db
+    q_conn = sqlite3.connect('database/Questions.db')
+    login_conn.close()
+
+    written_answers = json.loads(result[1]) if result[1] else []
+    written_marks = json.loads(result[2]) if result[2] else []
+
+    # Merge existing marks back in if re-marking
+    marks_by_id = {str(m['question_id']): m for m in written_marks}
+
+    return render_template('marking.html', result=result, written_answers=written_answers, marks_by_id=marks_by_id, result_id=result_id)
 
 if __name__ == '__main__':
     app.run(debug=True) 

@@ -21,6 +21,9 @@ cmd_results = '''CREATE TABLE IF NOT EXISTS results (
     accuracy REAL,
     avg_time REAL,
     wrong_questions TEXT,
+    written_answers TEXT,
+    written_marks TEXT,
+    marking_complete INTEGER DEFAULT 0,
     date TEXT,
     FOREIGN KEY (user_id) REFERENCES users(id))'''
 cursor.execute(cmd_results)

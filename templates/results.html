@@ -5,52 +5,122 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='main.css') }}">
     <title>Results</title>
-
+    <style>
+        .summary { background: #f8f9fa; border: 2px solid #e0e0e0;
+                   border-radius: 10px; padding: 1.5rem; margin-bottom: 1.5rem; }
+        .wrong-question-card { background: #fff0f0; border: 2px solid #e74c3c;
+                               border-radius: 10px; padding: 1.2rem;
+                               margin-bottom: 1rem; }
+        .written-card { background: #f0f5ff; border: 2px solid #2c7be5;
+                        border-radius: 10px; padding: 1.2rem; margin-bottom: 1rem; }
+        .written-card.marked { background: #f0fff4; border-color: #28a745; }
+        .wrong-answer { color: #e74c3c; font-weight: bold; }
+        .correct-answer { color: #28a745; font-weight: bold; }
+        .pending-badge { display: inline-block; background: #fff8f0;
+                         color: #e67e22; border: 1px solid #e67e22;
+                         padding: 0.2rem 0.6rem; border-radius: 12px;
+                         font-size: 0.8rem; font-weight: 700; }
+        .marked-badge { display: inline-block; background: #f0fff4;
+                        color: #28a745; border: 1px solid #28a745;
+                        padding: 0.2rem 0.6rem; border-radius: 12px;
+                        font-size: 0.8rem; font-weight: 700; }
+        .feedback-box { background: white; border-radius: 7px;
+                        padding: 0.8rem; margin-top: 0.8rem;
+                        font-size: 0.9rem; color: #555; }
+        .btn { padding: 0.5rem 1.2rem; border-radius: 7px; border: none;
+               font-size: 0.9rem; font-weight: 600; cursor: pointer;
+               text-decoration: none; display: inline-block; }
+        .btn-primary { background: #2c7be5; color: white; }
+        .btn-primary:hover { background: #1a6bd4; }
+    </style>
 </head>
 <body>
-     
-        <div class="banner">
-            <div class="banner-content">
-                <a href="{{ url_for('logout') }}">Log Out</a>   
-                <a href="/dashboard"> Back to Dashboard</a>
-            </div>
+    <div class="banner">
+        <div class="banner-content">
+            <a href="{{ url_for('logout') }}">Log Out</a>
+            <a href="/dashboard">Back to Dashboard</a>
         </div>
+    </div>
 
-        <main>
+    <main>
         <h1>Quiz Results</h1>
-        <p> Date: {{ date }}</p>\
+        <p>Date: {{ date }}</p>
 
+        <!-- Summary -->
         <div class="summary">
             <h2>Summary</h2>
-            <p>Score: {{ score }}%</p>
+            <p>Score: <strong>{{ score }}</strong></p>
             <p>Accuracy: <strong>{{ accuracy }}%</strong></p>
-            <p>Average time per question:  <strong>{{ avg_time }}s</strong></p>
-            {% if score == 100 %}
+            <p>Average time per question: <strong>{{ avg_time }}s</strong></p>
+
+            {% if marking_complete == 0 %}
+                <p>⏳ Some written answers are still being marked by your teacher.</p>
+            {% elif accuracy == 100 %}
                 <p>Perfect score! Great work! 🎉</p>
-            {% elif score >= 50 %}
+            {% elif accuracy >= 50 %}
                 <p>Good effort! Keep practising! 💪</p>
             {% else %}
                 <p>Keep trying, you'll get there! 📚</p>
             {% endif %}
         </div>
+
         <hr>
 
+        <!-- MC Wrong Answers -->
         <div class="results-breakdown">
-            {% if wrong_questions|length == 0 %}
-                <h2> You got Everything Right! 🎉</h2>
+            {% if wrong_questions|length == 0 and written_answers|length == 0 %}
+                <h2>You got everything right! 🎉</h2>
 
             {% else %}
-                <h2>Questions you got Wrong ({{ wrong_questions|length }})</h2>
-                {% for q in wrong_questions %}
+                {% if wrong_questions|length > 0 %}
+                    <h2>Questions You Got Wrong ({{ wrong_questions|length }})</h2>
+                    {% for q in wrong_questions %}
                     <div class="wrong-question-card">
-                        <p><strong>Question:</strong> {{ q.question }}</p>
-                        <p><strong>Your answer:</strong> <span class="wrong-answer">{{ q.your_answer }}</span></p>
-                        <p><strong>Correct answer:</strong> <span class="correct-answer">{{ q.correct_answer }}</span></p>
-                        </div>
-                        {% endfor %}
+                        <p><strong>Question:</strong> {{ q['question'] }}</p>
+                        <p><strong>Your answer:</strong>
+                            <span class="wrong-answer">{{ q['your_answer'] }}</span></p>
+                        <p><strong>Correct answer:</strong>
+                            <span class="correct-answer">{{ q['correct_answer'] }}</span></p>
+                    </div>
+                    {% endfor %}
+                {% endif %}
+
+                <!-- Written Answers -->
+                {% if written_answers|length > 0 %}
+                    <h2>Written Responses</h2>
+                    {% for wa in written_answers %}
+                    {% set m = marks_by_id.get(wa['question_id']|string) %}
+                    <div class="written-card {% if m %}marked{% endif %}">
+                        <p><strong>Question:</strong> {{ wa['question_text'] }}</p>
+                        <p><strong>Your answer:</strong> {{ wa['answer'] if wa['answer'] else 'No answer provided' }}</p>
+                        <p><strong>Max marks:</strong> {{ wa['max_marks'] }}</p>
+
+                        {% if m %}
+                            <span class="marked-badge">✓ Marked</span>
+                            <p><strong>Mark:</strong>
+                                <span class="correct-answer">{{ m['mark'] }} / {{ m['max_marks'] }}</span>
+                            </p>
+                            {% if m['feedback'] %}
+                            <div class="feedback-box">
+                                <strong>Teacher feedback:</strong> {{ m['feedback'] }}
+                            </div>
+                            {% endif %}
+                        {% else %}
+                            <span class="pending-badge">⏳ Awaiting marking</span>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                {% endif %}
+
             {% endif %}
         </div>
+
+        <!-- Admin mark button -->
+        {% if session.get('is_admin') and marking_complete == 0 %}
+        <a href="/mark_answers/{{ result_id }}" class="btn btn-primary">
+            Mark Written Answers
+        </a>
+        {% endif %}
     </main>
-    
 </body>
 </html>
